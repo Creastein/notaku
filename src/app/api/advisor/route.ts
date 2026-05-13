@@ -1,16 +1,7 @@
-import { NextResponse } from 'next/server';
-import { handleApi } from '@/lib/apiResponse';
-import { validateSchema, advisorRequestSchema } from '@/lib/validation';
-import { getAdvice } from '@/lib/gemini'; // assume a function that returns advice
+import { NextRequest, NextResponse } from "next/server";
+import { geminiModel } from "@/lib/gemini";
 
-export async function POST(request: Request) {
-  const json = await request.json();
-  const payload = validateSchema(advisorRequestSchema, json);
-
-  const result = await handleApi(() => getAdvice(payload.userId, payload.query));
-  return NextResponse.json(result);
-}
-
+const MAX_MESSAGE_LENGTH = 1000;
 
 export async function POST(request: NextRequest) {
   try {
