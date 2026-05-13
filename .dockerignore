@@ -1,0 +1,34 @@
+# Dependencies
+node_modules
+
+# Build output
+.next
+
+# Version control
+.git
+.gitignore
+
+# Environment (secrets — injected via build-args or Cloud Run env vars)
+.env
+.env.local
+.env.production
+
+# IDE & Editor
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Documentation & context (not needed in container)
+.context
+docs
+README.md
+AGENTS.md
+CLAUDE.md
+
+# Scripts not needed in production
+scripts
