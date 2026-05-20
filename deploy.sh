@@ -12,7 +12,7 @@
 set -e
 
 # ─── Configuration ──────────────────────────────────────────────────────────
-PROJECT_ID="jvcwellinotaku"
+PROJECT_ID="sapient-reducer-495808-i1"
 REGION="asia-southeast2"  # Jakarta
 SERVICE_NAME="notaku"
 
