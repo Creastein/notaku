@@ -1,4 +1,6 @@
-import { useMemo } from "react";
+"use client";
+
+import { useMemo, useState, useEffect } from "react";
 import { Transaction } from "@/types";
 import { AlertTriangle } from "lucide-react";
 import Link from "next/link";

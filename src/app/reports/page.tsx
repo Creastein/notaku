@@ -2,30 +2,72 @@
 
 import { useEffect, useState } from "react";
 import { Transaction } from "@/types";
-import { getTransactions } from "@/lib/storage";
+import { getTransactions, getUserProfile, UserProfile } from "@/lib/storage";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Area, AreaChart } from "recharts";
 import { format, subDays, startOfDay } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
-import { FileDown, TrendingUp, TrendingDown, Lightbulb } from "lucide-react";
+import { FileDown, TrendingUp, TrendingDown, Lightbulb, Settings, Sparkles, Bot, AlertTriangle, ShieldAlert, Award, Check, Loader2 } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import { GradientOrbs } from "@/components/effects/GradientOrbs";
+import { TiltCard } from "@/components/effects/TiltCard";
 
 function fmtRp(n: number) {
   return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(n);
 }
 
+function formatYAxis(value: number) {
+  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}jt`;
+  if (value >= 1_000) return `${(value / 1_000).toFixed(0)}rb`;
+  return String(value);
+}
+
+const CustomTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="glass-card rounded-2xl p-3 border border-emerald-500/10 shadow-xl backdrop-blur-md text-xs font-semibold space-y-1 bg-slate-950/90 text-slate-100">
+        <p className="text-[10px] font-black text-slate-400 mb-1.5 uppercase tracking-wider">{label}</p>
+        {payload.map((pld: any, index: number) => {
+          const color = pld.color || pld.fill || "var(--primary)";
+          return (
+            <div key={index} className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
+                <span>{pld.name}</span>
+              </div>
+              <span className="font-extrabold text-right" style={{ color }}>{fmtRp(pld.value)}</span>
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+  return null;
+};
+
 const COLORS = ["#10b981", "#f59e0b", "#6366f1", "#ef4444", "#ec4899", "#8b5cf6", "#14b8a6", "#f97316"];
 
 export default function ReportsPage() {
+  const router = useRouter();
   const [txs, setTxs] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState<7|30|90>(7);
+  const [mounted, setMounted] = useState(false);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
 
-  useEffect(() => { getTransactions().then(d => { setTxs(d); setLoading(false); }); }, []);
+  useEffect(() => {
+    setMounted(true);
+    getTransactions().then(d => { setTxs(d); setLoading(false); });
+    setProfile(getUserProfile());
+  }, []);
 
-  const now = new Date();
-  const periodTxs = txs.filter(t => new Date(t.date) >= subDays(now, period));
+  // All Date-dependent calculations only run client-side after mount
+  const now = mounted ? new Date() : new Date(0);
+  const periodTxs = mounted ? txs.filter(t => new Date(t.date) >= subDays(now, period)) : [];
 
-  const daily = Array.from({ length: Math.min(period, 14) }, (_, i) => {
+  const daily = mounted ? Array.from({ length: Math.min(period, 14) }, (_, i) => {
     const d = startOfDay(subDays(now, Math.min(period, 14) - 1 - i));
     const day = periodTxs.filter(t => startOfDay(new Date(t.date)).getTime() === d.getTime());
     return {
@@ -33,13 +75,97 @@ export default function ReportsPage() {
       pemasukan: day.filter(t => t.type === "income").reduce((s, t) => s + t.amount, 0),
       pengeluaran: day.filter(t => t.type === "expense").reduce((s, t) => s + t.amount, 0),
     };
-  });
+  }) : [];
 
   const catMap: Record<string, number> = {};
-  periodTxs.filter(t => t.type === "expense").forEach(t => { catMap[t.category] = (catMap[t.category] || 0) + t.amount; });
+  if (mounted) {
+    periodTxs.filter(t => t.type === "expense").forEach(t => { catMap[t.category] = (catMap[t.category] || 0) + t.amount; });
+  }
   const catData = Object.entries(catMap).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
 
-  const sorted = [...periodTxs].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  interface AIDigest {
+    healthScore: number;
+    healthLabel: string;
+    executiveSummary: string;
+    keyFindings: string[];
+    risks: string[];
+    recommendations: { title: string; description: string; priority: string; estimatedImpact: string }[];
+    cashflowVerdict: string;
+    targetProgress: string;
+  }
+  const [aiDigest, setAiDigest] = useState<AIDigest | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+
+  useEffect(() => {
+    if (!mounted || txs.length === 0) return;
+    
+    async function fetchAiAnalysis() {
+      setAiLoading(true);
+      const cacheKey = `notaku_report_analysis_${period}_v1`;
+      const cached = localStorage.getItem(cacheKey);
+
+      const income = periodTxs.filter(t => t.type === "income").reduce((acc, t) => acc + t.amount, 0);
+      const expense = periodTxs.filter(t => t.type === "expense").reduce((acc, t) => acc + t.amount, 0);
+      const profit = income - expense;
+      const txCount = periodTxs.length;
+
+      if (cached) {
+        try {
+          const parsed = JSON.parse(cached);
+          const isExpired = Date.now() - parsed.timestamp > 12 * 60 * 60 * 1000;
+          const dataChanged = parsed.transactionCount !== txCount || parsed.netProfit !== profit;
+
+          if (!isExpired && !dataChanged && parsed.analysis?.executiveSummary) {
+            setAiDigest(parsed.analysis);
+            setAiLoading(false);
+            return;
+          }
+        } catch {
+          // ignore cache error
+        }
+      }
+
+      try {
+        const res = await fetch("/api/report-analysis", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            financialData: {
+              totalIncome: income,
+              totalExpense: expense,
+              netProfit: profit,
+              transactionCount: txCount,
+              periodText: `${period} Hari Terakhir`,
+              categories: catData
+            },
+            profile,
+            period
+          })
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && data.analysis) {
+            setAiDigest(data.analysis);
+            localStorage.setItem(cacheKey, JSON.stringify({
+              analysis: data.analysis,
+              timestamp: Date.now(),
+              transactionCount: txCount,
+              netProfit: profit
+            }));
+          }
+        }
+      } catch (err) {
+        console.error("Gagal mendapatkan analisis AI:", err);
+      } finally {
+        setAiLoading(false);
+      }
+    }
+
+    fetchAiAnalysis();
+  }, [txs, period, mounted, profile]);
+
+  const sorted = mounted ? [...periodTxs].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()) : [];
   let cum = 0;
   const trend = sorted.map(t => { cum += t.type === "income" ? t.amount : -t.amount; return { date: format(new Date(t.date), "dd/MM"), profit: cum }; });
 
@@ -49,59 +175,373 @@ export default function ReportsPage() {
   const topCatPct = totOut > 0 && topCat ? Math.round((topCat.value / totOut) * 100) : 0;
 
   async function exportPDF() {
-    const doc = new jsPDF();
-    doc.setFontSize(18); doc.setTextColor(5, 150, 105);
-    doc.text("NotaKu - Laporan Keuangan", 20, 25);
-    doc.setFontSize(9); doc.setTextColor(100);
-    doc.text(`Dicetak: ${format(new Date(), "dd MMMM yyyy", { locale: idLocale })}`, 20, 33);
-    doc.line(20, 37, 190, 37);
-    
-    // Add summary
-    doc.setFontSize(11); doc.setTextColor(0);
-    doc.text("Ringkasan", 20, 47);
+    const doc = new jsPDF({
+      orientation: "portrait",
+      unit: "mm",
+      format: "a4"
+    });
+
+    // 1. Premium Header (Kop Surat)
+    // Dark Emerald Accent line at the very top
+    doc.setFillColor(5, 150, 105);
+    doc.rect(0, 0, 210, 8, "F");
+
+    // Title / Brand
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(24);
+    doc.setTextColor(5, 150, 105);
+    doc.text("NotaKu", 20, 24);
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(100);
+    doc.text("Pencatatan Keuangan & CFO AI Pendamping UMKM", 20, 29);
+
+    // Business Profile Box (Right Side)
+    doc.setFont("helvetica", "bold");
     doc.setFontSize(10);
-    doc.text(`Total Pemasukan: ${fmtRp(totIn)}`, 20, 57);
-    doc.text(`Total Pengeluaran: ${fmtRp(totOut)}`, 20, 64);
-    doc.text(`Profit: ${fmtRp(totIn - totOut)}`, 20, 71);
-    doc.text(`Jumlah Transaksi: ${periodTxs.length}`, 20, 78);
-    
-    // Capture charts if available
-    let y = 90;
+    doc.setTextColor(30, 41, 59);
+    doc.text(profile?.businessName || "Nama Usaha", 130, 20);
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8.5);
+    doc.setTextColor(100);
+    doc.text(`Pemilik: ${profile?.ownerName || "-"}`, 130, 24.5);
+    doc.text(`Kategori Usaha: ${profile?.businessCategory || "-"}`, 130, 29);
+    const targetText = profile?.targetMonthlyRevenue ? fmtRp(profile.targetMonthlyRevenue) : "-";
+    doc.text(`Target Omset: ${targetText}`, 130, 33.5);
+
+    // Elegant Divider Line
+    doc.setDrawColor(226, 232, 240);
+    doc.setLineWidth(0.5);
+    doc.line(20, 38, 190, 38);
+
+    // 2. Title & Metadata
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(14);
+    doc.setTextColor(30, 41, 59);
+    doc.text("LAPORAN ANALISIS KEUANGAN", 20, 48);
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(100);
+    const printedDate = format(new Date(), "dd MMMM yyyy, HH:mm", { locale: idLocale });
+    doc.text(`Periode Laporan: ${period} Hari Terakhir  |  Waktu Cetak: ${printedDate} WIB`, 20, 53);
+
+    // 3. Financial KPI Summary Cards
+    // 3 columns at y = 59, height = 20mm. Each width = 52mm, gap = 7mm
+    // Card 1: Pemasukan
+    doc.setFillColor(240, 253, 250); // Soft green bg
+    doc.setDrawColor(186, 230, 224); // border
+    doc.roundedRect(20, 59, 52, 20, 3, 3, "FD");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(7);
+    doc.setTextColor(100);
+    doc.text("TOTAL PEMASUKAN", 24, 65);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10.5);
+    doc.setTextColor(5, 150, 105);
+    doc.text(fmtRp(totIn), 24, 73);
+
+    // Card 2: Pengeluaran
+    doc.setFillColor(254, 242, 242); // Soft red bg
+    doc.setDrawColor(254, 202, 202); // border
+    doc.roundedRect(79, 59, 52, 20, 3, 3, "FD");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(7);
+    doc.setTextColor(100);
+    doc.text("TOTAL PENGELUARAN", 83, 65);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10.5);
+    doc.setTextColor(239, 68, 68);
+    doc.text(fmtRp(totOut), 83, 73);
+
+    // Card 3: Profit Bersih
+    const isProfit = totIn - totOut >= 0;
+    if (isProfit) {
+      doc.setFillColor(240, 249, 255); // Soft blue bg
+      doc.setDrawColor(191, 219, 254); // border
+    } else {
+      doc.setFillColor(255, 251, 235); // Soft amber bg
+      doc.setDrawColor(253, 230, 138); // border
+    }
+    doc.roundedRect(138, 59, 52, 20, 3, 3, "FD");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(7);
+    doc.setTextColor(100);
+    doc.text("PROFIT BERSIH", 142, 65);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10.5);
+    if (isProfit) {
+      doc.setTextColor(37, 99, 235);
+    } else {
+      doc.setTextColor(217, 119, 6);
+    }
+    doc.text(fmtRp(totIn - totOut), 142, 73);
+
+    // 4. Trend & Chart Capture
+    let y = 87;
     const chartsEl = document.getElementById("pdf-charts");
     if (chartsEl) {
       try {
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(11);
+        doc.setTextColor(30, 41, 59);
+        doc.text("Visualisasi Tren & Kategori", 20, y + 5);
+        doc.setDrawColor(241, 245, 249);
+        doc.line(20, y + 8, 190, y + 8);
+        y += 11;
+
+        // Apply temporary print-friendly styles for high-contrast screenshotting to the parent container
+        chartsEl.classList.add("pdf-export-mode");
+        
+        // Brief pause to allow style recalculation & paint to complete before screenshotting
+        await new Promise((resolve) => setTimeout(resolve, 150));
+
         const html2canvas = (await import("html2canvas")).default;
-        const canvas = await html2canvas(chartsEl, { scale: 2 });
-        const imgData = canvas.toDataURL("image/png");
-        // Calculate width to fit A4 (210x297) with 20mm margins -> 170mm width
-        const imgWidth = 170;
-        const imgHeight = (canvas.height * imgWidth) / canvas.width;
-        doc.addImage(imgData, "PNG", 20, y, imgWidth, imgHeight);
-        y += imgHeight + 10;
+        
+        // Get all individual chart cards
+        const chartCards = Array.from(chartsEl.children) as HTMLElement[];
+        
+        for (let i = 0; i < chartCards.length; i++) {
+          const cardEl = chartCards[i];
+          if (!cardEl.classList.contains("glass-card")) continue;
+
+          const canvas = await html2canvas(cardEl, {
+            scale: 2,
+            useCORS: true,
+            backgroundColor: "#ffffff", // clean premium light background for printing!
+          } as any);
+
+          const imgData = canvas.toDataURL("image/png");
+          
+          // Maximize to full width of A4 (170mm)
+          const finalImgWidth = 170;
+          const finalImgHeight = (canvas.height * finalImgWidth) / canvas.width;
+          
+          // If rendering this chart exceeds page height (A4 height ~297mm, bottom margin ~20mm -> max Y ~277)
+          if (y + finalImgHeight > 277) {
+            doc.addPage();
+            y = 20; // reset y for new page
+          }
+
+          doc.addImage(imgData, "PNG", 20, y, finalImgWidth, finalImgHeight);
+          y += finalImgHeight + 8; // 8mm gap between charts
+        }
+
+        // Revert to original dashboard style immediately
+        chartsEl.classList.remove("pdf-export-mode");
       } catch (err) {
-        console.error("Gagal capture grafik", err);
+        // Clean up class just in case an error occurs
+        chartsEl.classList.remove("pdf-export-mode");
+        console.error("Gagal capture grafik untuk PDF", err);
       }
     }
 
-    // Detail Table
-    if (y > 250) { doc.addPage(); y = 20; }
-    doc.line(20, y-5, 190, y-5);
-    doc.setFontSize(11); doc.text("Detail Transaksi", 20, y+5);
-    y += 15;
-    
-    doc.setFontSize(8); doc.setTextColor(100);
-    doc.text("Tanggal", 20, y); doc.text("Tipe", 55, y); doc.text("Kategori", 80, y); doc.text("Jumlah", 130, y);
-    y += 7; doc.setTextColor(0);
-    txs.slice(0, 100).forEach(tx => {
-      if (y > 275) { doc.addPage(); y = 20; }
-      doc.text(format(new Date(tx.date), "dd/MM/yy"), 20, y);
-      doc.text(tx.type === "income" ? "Masuk" : "Keluar", 55, y);
-      doc.text(tx.category, 80, y);
-      doc.text(fmtRp(tx.amount), 130, y);
-      y += 6;
+    // 4.5. AI CFO Analysis Section in PDF
+    if (aiDigest) {
+      if (y > 180) {
+        doc.addPage();
+        y = 20;
+      } else {
+        y += 6;
+      }
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(11);
+      doc.setTextColor(5, 150, 105); // emerald color for AI!
+      doc.text("Analisis & Peringatan AI CFO", 20, y);
+      doc.setDrawColor(209, 250, 229);
+      doc.line(20, y + 3, 190, y + 3);
+      y += 8;
+
+      // Draw background card for AI content
+      doc.setFillColor(249, 250, 251); // ultra light gray/white
+      doc.setDrawColor(229, 231, 235); // border
+      
+      const boxStartY = y;
+      let textY = y + 6;
+
+      // Health Score / Tag
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(9);
+      doc.setTextColor(30, 41, 59);
+      doc.text(`Skor Kesehatan Bisnis: ${aiDigest.healthScore}/100 (${aiDigest.healthLabel})`, 25, textY);
+      
+      // Target Progress / Cashflow Verdict
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8.5);
+      doc.setTextColor(71, 85, 105);
+      doc.text(`Aliran Kas: ${aiDigest.cashflowVerdict} | Kemajuan Target Omset: ${aiDigest.targetProgress}`, 25, textY + 5);
+      textY += 12;
+
+      // 1. Executive Summary
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(8.5);
+      doc.setTextColor(15, 23, 42);
+      doc.text("Ringkasan Eksekutif:", 25, textY);
+      textY += 4.5;
+      
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      doc.setTextColor(71, 85, 105);
+      const summaryLines = doc.splitTextToSize(aiDigest.executiveSummary, 160);
+      doc.text(summaryLines, 25, textY);
+      textY += (summaryLines.length * 4) + 4;
+
+      // 2. Temuan Penting & Risiko
+      if ((aiDigest.keyFindings && aiDigest.keyFindings.length > 0) || (aiDigest.risks && aiDigest.risks.length > 0)) {
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(8.5);
+        doc.setTextColor(15, 23, 42);
+        doc.text("Temuan & Risiko Utama:", 25, textY);
+        textY += 4.5;
+
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(8);
+        doc.setTextColor(71, 85, 105);
+        
+        const allFindings = [...(aiDigest.keyFindings || []), ...(aiDigest.risks || []).map(r => `[Peringatan] ${r}`)];
+        allFindings.forEach((finding) => {
+          const findingLines = doc.splitTextToSize(`• ${finding}`, 155);
+          doc.text(findingLines, 25, textY);
+          textY += (findingLines.length * 4) + 2;
+        });
+        textY += 2;
+      }
+
+      // 3. Recommendation Box
+      if (aiDigest.recommendations && aiDigest.recommendations.length > 0) {
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(8.5);
+        doc.setTextColor(15, 23, 42);
+        doc.text("Rekomendasi Tindakan CFO:", 25, textY);
+        textY += 4.5;
+
+        aiDigest.recommendations.forEach((rec, idx) => {
+          doc.setFillColor(254, 251, 232); // amber 50
+          doc.setDrawColor(254, 243, 199); // amber 100
+          
+          const recText = `${rec.title} - ${rec.description} (Prioritas: ${rec.priority} | Dampak: ${rec.estimatedImpact})`;
+          const recLines = doc.splitTextToSize(recText, 150);
+          const recHeight = (recLines.length * 3.8) + 6;
+
+          if (textY + recHeight > 270) {
+            // Draw background for what we have done
+            doc.setDrawColor(229, 231, 235);
+            doc.setFillColor(0, 0, 0, 0); 
+            doc.roundedRect(20, boxStartY, 170, (textY - boxStartY - 2), 3, 3, "D");
+            
+            doc.addPage();
+            y = 20;
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(11);
+            doc.setTextColor(5, 150, 105);
+            doc.text("Rekomendasi Tindakan (Lanjutan)", 20, y);
+            doc.setDrawColor(209, 250, 229);
+            doc.line(20, y + 3, 190, y + 3);
+            y += 8;
+            
+            textY = y + 6;
+          }
+
+          doc.roundedRect(24, textY, 162, recHeight, 2, 2, "FD");
+          doc.setFont("helvetica", "normal");
+          doc.setFontSize(7.5);
+          doc.setTextColor(30, 41, 59);
+          doc.text(recLines, 28, textY + 4.5);
+          textY += recHeight + 3;
+        });
+      }
+
+      // Draw the outer container box
+      doc.setDrawColor(229, 231, 235);
+      doc.setFillColor(0, 0, 0, 0); // transparent fill
+      doc.roundedRect(20, boxStartY, 170, (textY - boxStartY - 2), 3, 3, "D");
+      
+      y = textY + 6;
+    }
+
+    // 5. Detailed Transaction Table (autotable)
+    // If the next table is too close to bottom of page (Y > 210), start on fresh page!
+    if (y > 210) {
+      doc.addPage();
+      y = 20;
+    } else {
+      y += 2;
+    }
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.setTextColor(30, 41, 59);
+    doc.text("Rincian Transaksi Finansial", 20, y);
+
+    // jspdf-autotable custom rendering
+    autoTable(doc, {
+      startY: y + 4,
+      head: [["Tanggal", "Tipe", "Kategori", "Merchant / Keterangan", "Nominal"]],
+      body: periodTxs.map(tx => {
+        const formattedDate = format(new Date(tx.date), "dd/MM/yyyy");
+        const txType = tx.type === "income" ? "Masuk" : "Keluar";
+        const desc = tx.merchantName 
+          ? `${tx.merchantName}${tx.notes ? ` (${tx.notes})` : ""}`
+          : (tx.notes || "-");
+        return [
+          formattedDate,
+          txType,
+          tx.category,
+          desc,
+          fmtRp(tx.amount)
+        ];
+      }),
+      styles: {
+        fontSize: 8,
+        font: "helvetica",
+        cellPadding: 2.5,
+        textColor: [30, 41, 59],
+        lineColor: [226, 232, 240],
+        lineWidth: 0.1,
+      },
+      headStyles: {
+        fillColor: [5, 150, 105],
+        textColor: [255, 255, 255],
+        fontStyle: "bold",
+        fontSize: 8.5
+      },
+      alternateRowStyles: {
+        fillColor: [248, 250, 252]
+      },
+      columnStyles: {
+        0: { cellWidth: 24 },
+        1: { cellWidth: 20 },
+        2: { cellWidth: 32 },
+        3: { cellWidth: 64 },
+        4: { cellWidth: 30, halign: "right", fontStyle: "bold" }
+      },
+      margin: { left: 20, right: 20 },
+      theme: "striped",
+      didDrawPage: function (data) {
+        // Footer signature for each page
+        const currentPage = data.pageNumber;
+
+        doc.setFontSize(8);
+        doc.setTextColor(148, 163, 184);
+        doc.setFont("helvetica", "normal");
+        
+        // Border line at the footer
+        doc.setDrawColor(241, 245, 249);
+        doc.setLineWidth(0.3);
+        doc.line(20, 283, 190, 283);
+
+        doc.text(`NotaKu CFO AI Laporan Finansial  |  Dihasilkan secara otomatis`, 20, 288);
+        doc.text(`Halaman ${currentPage}`, 190, 288, { align: "right" });
+      }
     });
-    
-    doc.save("NotaKu_Laporan_Premium.pdf");
+
+    const fileSuffix = profile?.businessName 
+      ? profile.businessName.replace(/\s+/g, "_")
+      : "UMKM";
+    doc.save(`Laporan_Finansial_NotaKu_${fileSuffix}.pdf`);
   }
 
   if (loading) return (
@@ -112,24 +552,45 @@ export default function ReportsPage() {
   );
 
   return (
-    <div className="p-5 space-y-4">
-      <div className="flex items-center justify-between pt-3 animate-fade-in-up">
+    <div className="relative min-h-screen pb-20">
+      <GradientOrbs />
+      
+      <div className="p-5 space-y-4 relative z-10">
+        <div className="flex items-center justify-between pt-3 animate-fade-in-up">
         <div>
           <h1 className="text-xl font-extrabold tracking-tight">Laporan</h1>
           <p className="text-sm text-foreground/40 font-medium">Analisis keuangan</p>
         </div>
-        <button onClick={exportPDF} className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-semibold transition-all hover:scale-105" style={{ background: "var(--gradient-primary)", color: "white", boxShadow: "0 2px 12px rgba(5,150,105,0.3)" }}>
-          <FileDown size={16}/>PDF
-        </button>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/settings"
+            className="w-8 h-8 flex items-center justify-center rounded-full bg-foreground/[0.05] border border-foreground/[0.07] text-foreground/60 hover:text-foreground hover:bg-foreground/[0.08] transition-colors"
+          >
+            <Settings size={14} />
+          </Link>
+          <button onClick={exportPDF} className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-semibold transition-all hover:scale-105" style={{ background: "var(--gradient-primary)", color: "white", boxShadow: "0 2px 12px rgba(5,150,105,0.3)" }}>
+            <FileDown size={16}/>PDF
+          </button>
+        </div>
       </div>
 
       {/* Period Selector */}
-      <div className="flex gap-2 animate-fade-in-up delay-1">
-        {([7,30,90] as const).map(p => (
-          <button key={p} onClick={() => setPeriod(p)} className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all ${period===p ? "bg-primary text-white shadow-md" : "glass-card text-foreground/50"}`}>
-            {p} Hari
-          </button>
-        ))}
+      <div className="flex animate-fade-in-up delay-1">
+        <div className="glass-card rounded-2xl p-1 flex gap-1 shadow-sm">
+          {([7, 30, 90] as const).map(p => (
+            <button
+              key={p}
+              onClick={() => setPeriod(p)}
+              className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all duration-300 ${
+                period === p
+                  ? "bg-primary text-white shadow-md shadow-primary/20 scale-[1.02]"
+                  : "text-foreground/50 hover:text-foreground/85 hover:bg-foreground/[0.02]"
+              }`}
+            >
+              {p} Hari
+            </button>
+          ))}
+        </div>
       </div>
 
       {txs.length === 0 ? (
@@ -142,39 +603,111 @@ export default function ReportsPage() {
         <>
           {/* Summary Cards */}
           <div className="grid grid-cols-2 gap-3 animate-fade-in-up delay-2">
-            <div className="glass-card rounded-2xl p-4">
-              <div className="flex items-center gap-2 mb-1"><TrendingUp size={14} className="text-emerald-500"/><span className="text-[11px] text-foreground/40 font-medium">Pemasukan</span></div>
-              <p className="text-base font-extrabold text-emerald-600">{fmtRp(totIn)}</p>
-            </div>
-            <div className="glass-card rounded-2xl p-4">
-              <div className="flex items-center gap-2 mb-1"><TrendingDown size={14} className="text-red-500"/><span className="text-[11px] text-foreground/40 font-medium">Pengeluaran</span></div>
-              <p className="text-base font-extrabold text-red-500">{fmtRp(totOut)}</p>
-            </div>
+            <TiltCard>
+              <div className="glass-card rounded-2xl p-4 h-full relative overflow-hidden group">
+                <div className="flex items-center gap-2 mb-1">
+                  <div className="p-1 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                    <TrendingUp size={14} />
+                  </div>
+                  <span className="text-[11px] text-foreground/45 font-bold uppercase tracking-wider">Pemasukan</span>
+                </div>
+                <p className="text-lg font-black text-emerald-600 mt-1">{fmtRp(totIn)}</p>
+                <div className="absolute -right-3 -bottom-3 text-emerald-500/5 group-hover:scale-110 transition-transform duration-300">
+                  <TrendingUp size={64} />
+                </div>
+              </div>
+            </TiltCard>
+            <TiltCard>
+              <div className="glass-card rounded-2xl p-4 h-full relative overflow-hidden group">
+                <div className="flex items-center gap-2 mb-1">
+                  <div className="p-1 rounded-lg bg-red-500/10 text-red-600 dark:text-red-400">
+                    <TrendingDown size={14} />
+                  </div>
+                  <span className="text-[11px] text-foreground/45 font-bold uppercase tracking-wider">Pengeluaran</span>
+                </div>
+                <p className="text-lg font-black text-red-500 mt-1">{fmtRp(totOut)}</p>
+                <div className="absolute -right-3 -bottom-3 text-red-500/5 group-hover:scale-110 transition-transform duration-300">
+                  <TrendingDown size={64} />
+                </div>
+              </div>
+            </TiltCard>
           </div>
 
-          {/* Insight Card */}
-          {topCat && (
-            <div className="glass-card rounded-2xl p-4 flex items-start gap-3 animate-fade-in-up delay-3">
-              <div className="bg-amber-500/10 p-2 rounded-xl shrink-0"><Lightbulb size={16} className="text-amber-500"/></div>
-              <div>
-                <p className="text-xs font-bold text-foreground/60">Insight AI</p>
-                <p className="text-xs text-foreground/40 mt-0.5">Pengeluaran terbesar: <span className="font-bold text-foreground/70">{topCat.name}</span> ({topCatPct}% dari total). {topCatPct > 40 ? "Pertimbangkan untuk mengurangi pengeluaran di kategori ini." : "Distribusi pengeluaran cukup seimbang."}</p>
+          {/* Real AI Advisor Card - Simplified Option 3 */}
+          {aiLoading ? (
+            <div className="glass-card rounded-2xl p-4 animate-fade-in-up delay-3 space-y-3 relative overflow-hidden">
+              <div className="flex items-center gap-3">
+                <div className="bg-emerald-500/10 p-2 rounded-xl text-emerald-500 shadow-sm shrink-0">
+                  <Sparkles className="animate-pulse" size={16} />
+                </div>
+                <div className="h-4 w-32 bg-foreground/10 rounded animate-pulse" />
+              </div>
+              <div className="h-3 w-5/6 bg-foreground/5 rounded animate-pulse" />
+            </div>
+          ) : aiDigest ? (
+            <div className="relative rounded-2xl p-[1.5px] overflow-hidden animate-fade-in-up delay-3 shadow-lg shadow-emerald-500/5">
+              {/* Dynamic premium glowing border */}
+              <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/15 via-teal-500/15 to-indigo-500/15 blur-[2px]" />
+              <div className="relative bg-card/90 backdrop-blur-xl rounded-2xl p-4 flex flex-col gap-3">
+                {/* Header */}
+                <div className="flex items-center gap-3">
+                  <div className="bg-gradient-to-br from-emerald-500 to-teal-600 p-2 rounded-xl text-white shadow-sm shadow-emerald-500/10 shrink-0">
+                    <Sparkles size={16} />
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="text-[11px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">AI CFO Penasihat</p>
+                    <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600">
+                      Skor Sehat: {aiDigest.healthScore}/100
+                    </span>
+                  </div>
+                </div>
+                
+                {/* Body Text */}
+                <div className="space-y-1.5">
+                  <p className="text-xs font-bold text-foreground/90 leading-relaxed">
+                    {aiDigest.executiveSummary}
+                  </p>
+                  <p className="text-[11px] text-foreground/50 flex flex-wrap gap-x-2">
+                    <span>Aliran Kas: <span className="font-bold text-foreground/70">{aiDigest.cashflowVerdict}</span></span>
+                    <span className="hidden sm:inline">|</span>
+                    <span>Target Omset: <span className="font-bold text-foreground/70">{aiDigest.targetProgress}</span></span>
+                  </p>
+                </div>
+                
+                {/* Action Button */}
+                <button
+                  onClick={() => {
+                    localStorage.setItem(
+                      "notaku_pending_advisor_prompt",
+                      `Berikan saya rekomendasi keuangan berdasarkan laporan keuangan ${period} hari terakhir. Skor kesehatan bisnis saya adalah ${aiDigest.healthScore}/100 dengan status aliran kas "${aiDigest.cashflowVerdict}" dan pencapaian target "${aiDigest.targetProgress}".`
+                    );
+                    router.push("/advisor");
+                  }}
+                  className="w-full mt-1 py-2.5 rounded-xl text-xs font-bold transition-all text-center flex items-center justify-center gap-1.5 hover:scale-[1.02]"
+                  style={{
+                    background: "var(--gradient-primary)",
+                    color: "white",
+                    boxShadow: "0 4px 12px rgba(5,150,105,0.2)"
+                  }}
+                >
+                  Diskusikan Rekomendasi di AI Chat ➔
+                </button>
               </div>
             </div>
-          )}
+          ) : null}
 
           <div id="pdf-charts" className="space-y-4 bg-background">
             {/* Bar Chart */}
             <div className="glass-card rounded-2xl p-4 animate-fade-in-up delay-4">
-              <h3 className="font-bold text-sm mb-4">Pemasukan vs Pengeluaran</h3>
+              <h3 className="font-extrabold text-sm mb-4 tracking-tight">Pemasukan vs Pengeluaran</h3>
               <ResponsiveContainer width="100%" height={200}>
                 <BarChart data={daily}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                  <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                  <YAxis tick={{ fontSize: 10 }} tickFormatter={v => `${(v/1e6).toFixed(1)}jt`} />
-                  <Tooltip formatter={(v) => fmtRp(Number(v))} />
-                  <Bar dataKey="pemasukan" fill="#10b981" radius={[6, 6, 0, 0]} />
-                  <Bar dataKey="pengeluaran" fill="#ef4444" radius={[6, 6, 0, 0]} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                  <XAxis dataKey="name" tick={{ fontSize: 10, fontWeight: 600, fill: "var(--foreground)", opacity: 0.5 }} tickLine={false} axisLine={false} />
+                  <YAxis tick={{ fontSize: 10, fontWeight: 600, fill: "var(--foreground)", opacity: 0.5 }} tickFormatter={formatYAxis} tickLine={false} axisLine={false} />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Bar dataKey="pemasukan" name="Pemasukan" fill="#10b981" radius={[6, 6, 0, 0]} isAnimationActive={false} />
+                  <Bar dataKey="pengeluaran" name="Pengeluaran" fill="#ef4444" radius={[6, 6, 0, 0]} isAnimationActive={false} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -182,22 +715,61 @@ export default function ReportsPage() {
             {/* Pie Chart */}
             {catData.length > 0 && (
               <div className="glass-card rounded-2xl p-4 animate-fade-in-up delay-5">
-                <h3 className="font-bold text-sm mb-4">Pengeluaran per Kategori</h3>
-                <ResponsiveContainer width="100%" height={200}>
-                  <PieChart>
-                    <Pie data={catData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={3} dataKey="value" label={({ name, percent }) => `${name} ${((percent||0)*100).toFixed(0)}%`}>
-                      {catData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-                    </Pie>
-                    <Tooltip formatter={(v) => fmtRp(Number(v))} />
-                  </PieChart>
-                </ResponsiveContainer>
+                <h3 className="font-extrabold text-sm mb-4 tracking-tight">Pengeluaran per Kategori</h3>
+                <div className="relative flex items-center justify-center h-[200px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={catData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={55}
+                        outerRadius={75}
+                        paddingAngle={4}
+                        dataKey="value"
+                        isAnimationActive={false}
+                      >
+                        {catData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                      </Pie>
+                      <Tooltip content={<CustomTooltip />} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="absolute flex flex-col items-center justify-center text-center pointer-events-none">
+                    <span className="text-[10px] uppercase tracking-wider text-foreground/45 font-bold">Total Keluar</span>
+                    <span className="text-base font-black text-red-500 mt-0.5">{fmtRp(totOut)}</span>
+                  </div>
+                </div>
+
+                {/* Premium Bento Grid Legend */}
+                <div className="mt-4 grid grid-cols-2 gap-2.5">
+                  {catData.map((item, i) => {
+                    const percent = totOut > 0 ? (item.value / totOut) * 100 : 0;
+                    return (
+                      <div
+                        key={i}
+                        className="flex flex-col p-3 rounded-2xl glass-card relative overflow-hidden transition-all duration-300 hover:scale-[1.02] shadow-sm hover:shadow-md"
+                        style={{ borderLeft: `4px solid ${COLORS[i % COLORS.length]}` }}
+                      >
+                        <span className="text-xs font-bold text-foreground/75 truncate">{item.name}</span>
+                        <div className="flex items-baseline justify-between mt-1 gap-1">
+                          <span className="text-sm font-extrabold text-foreground">{fmtRp(item.value)}</span>
+                          <span className="text-[10px] font-black text-foreground/40 shrink-0">{percent.toFixed(0)}%</span>
+                        </div>
+                        <div
+                          className="absolute inset-0 opacity-[0.03] pointer-events-none"
+                          style={{ backgroundColor: COLORS[i % COLORS.length] }}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             )}
 
             {/* Trend Line */}
             {trend.length > 1 && (
               <div className="glass-card rounded-2xl p-4 animate-fade-in-up delay-6">
-                <h3 className="font-bold text-sm mb-4">Tren Profit</h3>
+                <h3 className="font-extrabold text-sm mb-4 tracking-tight">Tren Profit</h3>
                 <ResponsiveContainer width="100%" height={200}>
                   <AreaChart data={trend}>
                     <defs>
@@ -206,11 +778,11 @@ export default function ReportsPage() {
                         <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                    <XAxis dataKey="date" tick={{ fontSize: 10 }} />
-                    <YAxis tick={{ fontSize: 10 }} tickFormatter={v => `${(v/1e6).toFixed(1)}jt`} />
-                    <Tooltip formatter={(v) => fmtRp(Number(v))} />
-                    <Area type="monotone" dataKey="profit" stroke="#10b981" strokeWidth={2.5} fill="url(#profitGrad)" dot={{ r: 3, fill: "#10b981" }} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                    <XAxis dataKey="date" tick={{ fontSize: 10, fontWeight: 600, fill: "var(--foreground)", opacity: 0.5 }} tickLine={false} axisLine={false} />
+                    <YAxis tick={{ fontSize: 10, fontWeight: 600, fill: "var(--foreground)", opacity: 0.5 }} tickFormatter={formatYAxis} tickLine={false} axisLine={false} />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Area type="monotone" name="Tren Profit" dataKey="profit" stroke="#10b981" strokeWidth={2.5} fill="url(#profitGrad)" dot={{ r: 3.5, fill: "#10b981", strokeWidth: 1, stroke: "#fff" }} isAnimationActive={false} />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
@@ -218,6 +790,7 @@ export default function ReportsPage() {
           </div>
         </>
       )}
+      </div>
     </div>
   );
 }

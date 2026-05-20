@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { Transaction } from "@/types";
-import { getTransactions, seedDemoData, hasDemoData } from "@/lib/storage";
+import { getTransactions, seedDemoData, hasDemoData, getUserProfile } from "@/lib/storage";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import {
@@ -18,6 +18,7 @@ import {
   ChevronRight,
   Zap,
   ChevronDown,
+  Settings,
 } from "lucide-react";
 import { format, isSameMonth, startOfMonth, subMonths, isToday, isYesterday } from "date-fns";
 import { id } from "date-fns/locale";
@@ -25,6 +26,9 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { AIDigestCard } from "@/components/AIDigestCard";
 import { SpendingAnomaly } from "@/components/SpendingAnomaly";
+import { GradientOrbs } from "@/components/effects/GradientOrbs";
+import { TiltCard } from "@/components/effects/TiltCard";
+import { CountUp } from "@/components/effects/CountUp";
 
 /* ─────────────────── helpers ─────────────────── */
 
@@ -91,20 +95,21 @@ function getSparklinePoints(transactions: Transaction[], type: "income" | "expen
 }
 
 /* ─────────────────── Sparkline ─────────────────── */
+let sparklineCounter = 0;
 function Sparkline({ points, color }: { points: string; color: "green" | "red" }) {
   const strokeColor = color === "green" ? "#10b981" : "#ef4444";
-  const fillUrl = color === "green" ? "url(#gradGreen)" : "url(#gradRed)";
+  // Unique ID per instance to avoid SVG gradient ID collisions
+  const idRef = useRef(`spark-${color}-${++sparklineCounter}`);
+  const gradId = idRef.current;
+  const fillUrl = `url(#${gradId})`;
+  const gradColor = color === "green" ? "#10b981" : "#ef4444";
 
   return (
     <svg width="100%" height="24" className="absolute bottom-0 left-0 right-0 opacity-40 mix-blend-multiply dark:mix-blend-screen pointer-events-none" preserveAspectRatio="none" viewBox="0 0 60 24">
       <defs>
-        <linearGradient id="gradGreen" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#10b981" stopOpacity="0.5" />
-          <stop offset="100%" stopColor="#10b981" stopOpacity="0" />
-        </linearGradient>
-        <linearGradient id="gradRed" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#ef4444" stopOpacity="0.5" />
-          <stop offset="100%" stopColor="#ef4444" stopOpacity="0" />
+        <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={gradColor} stopOpacity="0.5" />
+          <stop offset="100%" stopColor={gradColor} stopOpacity="0" />
         </linearGradient>
       </defs>
       <polyline points={`0,24 ${points} 60,24`} fill={fillUrl} stroke="none" />
@@ -114,38 +119,7 @@ function Sparkline({ points, color }: { points: string; color: "green" | "red" }
 }
 
 /* ─────────────────── animated counter ─────────────────── */
-
-function AnimatedNumber({ value, prefix = "" }: { value: number; prefix?: string }) {
-  const elRef = useRef<HTMLSpanElement>(null);
-  const prevRef = useRef(0);
-
-  useEffect(() => {
-    const el = elRef.current;
-    if (!el) return;
-    const from = prevRef.current;
-    const to = value;
-    prevRef.current = to;
-    const start = performance.now();
-    const dur = 900;
-    const raf = (now: number) => {
-      const t = Math.min((now - start) / dur, 1);
-      const eased = 1 - Math.pow(1 - t, 4); // quartic ease-out
-      const current = from + (to - from) * eased;
-      el.textContent =
-        prefix +
-        new Intl.NumberFormat("id-ID", {
-          style: "currency",
-          currency: "IDR",
-          minimumFractionDigits: 0,
-          maximumFractionDigits: 0,
-        }).format(current);
-      if (t < 1) requestAnimationFrame(raf);
-    };
-    requestAnimationFrame(raf);
-  }, [value, prefix]);
-
-  return <span ref={elRef}>{prefix}{formatRupiah(value)}</span>;
-}
+// Handled by CountUp component
 
 /* ─────────────────── mini stat pill ─────────────────── */
 
@@ -303,7 +277,15 @@ function TxRow({ tx, index }: { tx: Transaction; index: number }) {
             {tx.merchantName || tx.category}
           </p>
           <p className="text-[11px] text-foreground/40 font-medium mt-0.5">
-            {format(new Date(tx.date), "dd MMM", { locale: id })}
+            {(() => {
+              try {
+                const dateObj = new Date(tx.date);
+                if (!tx.date || isNaN(dateObj.getTime())) return "Baru saja";
+                return format(dateObj, "dd MMM", { locale: id });
+              } catch {
+                return "Baru saja";
+              }
+            })()}
             {tx.category && tx.merchantName ? (
               <span className="ml-1.5 px-1.5 py-0.5 bg-foreground/[0.05] rounded-full text-[9px] font-semibold uppercase tracking-wide">
                 {tx.category}
@@ -334,6 +316,10 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [timeFilter, setTimeFilter] = useState<"all" | "month">("all");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const [greeting, setGreeting] = useState({ text: "Halo", emoji: "👋" });
+  const [showDemoBtn, setShowDemoBtn] = useState(false);
+  const [showToast, setShowToast] = useState(false);
   
   const router = useRouter();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -344,42 +330,63 @@ export default function HomePage() {
     () => {
       if (loading) return;
 
-      const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
+      // Pada mobile (touch devices), skip animasi berat untuk menghindari
+      // elemen yang stuck di opacity:0 jika GSAP gagal
+      const isMobile = window.matchMedia("(pointer: coarse)").matches;
 
-      tl.fromTo(
-        ".hero-card",
-        { y: 40, opacity: 0, scale: 0.96 },
-        { y: 0, opacity: 1, scale: 1, duration: 0.7, ease: "back.out(1.4)" }
-      )
-        .fromTo(
-          ".page-header",
-          { y: -20, opacity: 0 },
-          { y: 0, opacity: 1, duration: 0.5 },
-          "<0.1"
-        )
-        .fromTo(
-          ".stat-pill-wrap",
-          { y: 20, opacity: 0 },
-          { y: 0, opacity: 1, duration: 0.5, stagger: 0.07 },
-          "-=0.3"
-        )
-        .fromTo(
-          ".qa-item",
-          { y: 24, opacity: 0, scale: 0.88 },
-          { y: 0, opacity: 1, scale: 1, duration: 0.45, stagger: 0.08, ease: "back.out(1.7)" },
-          "-=0.2"
-        )
-        .fromTo(
-          ".content-card",
-          { y: 20, opacity: 0 },
-          { y: 0, opacity: 1, duration: 0.45, stagger: 0.06 },
-          "-=0.15"
+      if (isMobile) {
+        // Mobile: gunakan CSS animation saja (sudah visible by default)
+        // Hanya tambahkan subtle fade-in via class
+        const elements = containerRef.current?.querySelectorAll(
+          ".hero-card, .page-header, .stat-pill-wrap, .qa-item, .content-card"
         );
+        elements?.forEach((el, i) => {
+          (el as HTMLElement).style.animationDelay = `${i * 60}ms`;
+          el.classList.add("animate-fade-in-up");
+        });
+        return;
+      }
+
+      // Desktop: gunakan GSAP dari `from` (bukan `fromTo`) agar elemen
+      // tetap visible jika GSAP gagal — `from` animasi DARI state tertentu
+      // MENUJU state natural di CSS (yang sudah opacity:1)
+      try {
+        const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
+
+        tl.from(
+          ".hero-card",
+          { y: 40, opacity: 0, scale: 0.96, duration: 0.7, ease: "back.out(1.4)", clearProps: "all" }
+        )
+          .from(
+            ".page-header",
+            { y: -20, opacity: 0, duration: 0.5, clearProps: "all" },
+            "<0.1"
+          )
+          .from(
+            ".stat-pill-wrap",
+            { y: 20, opacity: 0, duration: 0.5, stagger: 0.07, clearProps: "all" },
+            "-=0.3"
+          )
+          .from(
+            ".qa-item",
+            { y: 24, opacity: 0, scale: 0.88, duration: 0.45, stagger: 0.08, ease: "back.out(1.7)", clearProps: "all" },
+            "-=0.2"
+          )
+          .from(
+            ".content-card",
+            { y: 20, opacity: 0, duration: 0.45, stagger: 0.06, clearProps: "all" },
+            "-=0.15"
+          );
+      } catch (err) {
+        console.error("GSAP animation failed:", err);
+        // Fallback: pastikan semua elemen terlihat
+        gsap.set([".hero-card", ".page-header", ".stat-pill-wrap", ".qa-item", ".content-card"], { clearProps: "all" });
+      }
     },
     { scope: containerRef, dependencies: [loading] }
   );
 
-  /* ── Hero card tilt on touch/mouse ── */
+  /* ── Hero card shine effect on touch/mouse ── */
   const handleHeroMove = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     const el = heroRef.current;
     if (!el) return;
@@ -392,49 +399,54 @@ export default function HomePage() {
     const y = clientY - rect.top;
     el.style.setProperty('--x', `${x}px`);
     el.style.setProperty('--y', `${y}px`);
-
-    const rx = ((clientY - rect.top) / rect.height - 0.5) * -10;
-    const ry = ((clientX - rect.left) / rect.width - 0.5) * 10;
-    gsap.to(el, {
-      rotateX: rx,
-      rotateY: ry,
-      duration: 0.4,
-      ease: "power2.out",
-      transformPerspective: 600,
-    });
   }, []);
 
   const handleHeroLeave = useCallback(() => {
     const el = heroRef.current;
     if (!el) return;
-    gsap.to(el, {
-      rotateX: 0,
-      rotateY: 0,
-      duration: 0.8,
-      ease: "elastic.out(1, 0.5)",
-      transformPerspective: 600,
-    });
+    // Reset shine or leave it as is
+  }, []);
+
+  /* ── client-side initialization ── */
+  useEffect(() => {
+    setMounted(true);
+    setGreeting(getGreeting());
+    setShowDemoBtn(!hasDemoData());
   }, []);
 
   /* ── data loading ── */
   useEffect(() => {
-    if (!localStorage.getItem("notaku_onboarded")) {
+    if (!mounted) return;
+    const profile = getUserProfile();
+    if (!localStorage.getItem("notaku_onboarded") || !profile) {
       router.push("/onboarding");
       return;
     }
+    
+    // Personalize greeting
+    const baseGreeting = getGreeting();
+    setGreeting({
+      text: `${baseGreeting.text}, ${profile.ownerName}`,
+      emoji: baseGreeting.emoji
+    });
+    
     loadData();
-  }, [router]);
+  }, [mounted, router]);
 
   async function loadData() {
     setLoading(true);
     const data = await getTransactions();
     setTransactions(data);
+    setShowDemoBtn(!hasDemoData());
     setLoading(false);
   }
 
   function handleSeedDemo() {
     const data = seedDemoData();
     setTransactions(data);
+    setShowDemoBtn(false);
+    setShowToast(true);
+    setTimeout(() => setShowToast(false), 3000);
   }
 
   /* ── derived values ── */
@@ -482,7 +494,6 @@ export default function HomePage() {
     return groups;
   }, [transactions]);
 
-  const { text: greeting, emoji } = getGreeting();
   const txCount = transactions.length;
 
   /* ── premium shimmer loader ── */
@@ -512,12 +523,20 @@ export default function HomePage() {
 
   return (
     <div ref={containerRef} className="p-5 space-y-4 pb-6">
+      <GradientOrbs />
+
+      {/* Floating Toast Notification */}
+      {showToast && (
+        <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 glass-card bg-emerald-500/10 border border-emerald-500/20 px-4 py-3 rounded-2xl shadow-xl flex items-center gap-2 animate-scale-in text-xs font-bold text-emerald-600 dark:text-emerald-400" style={{ backdropFilter: "blur(20px)" }}>
+          <span>✨</span> 35 Data Demo Berhasil Dimuat!
+        </div>
+      )}
 
       {/* ── HEADER ── */}
       <div className="page-header flex items-center justify-between pt-3">
         <div>
           <p className="text-xs text-foreground/45 font-semibold tracking-wide uppercase">
-            {greeting} {emoji}
+            {greeting.text} {greeting.emoji}
           </p>
           <h1 className="text-[26px] font-black tracking-[-0.03em] mt-0.5 leading-none">
             Nota<span className="gradient-text">Ku</span>
@@ -525,7 +544,7 @@ export default function HomePage() {
         </div>
 
         <div className="flex items-center gap-2">
-          {!hasDemoData() && (
+          {mounted && showDemoBtn && (
             <button
               onClick={handleSeedDemo}
               className="flex items-center gap-1.5 text-[11px] font-bold px-3 py-1.5 rounded-full"
@@ -546,27 +565,35 @@ export default function HomePage() {
               {txCount} trx
             </span>
           </div>
+          {/* Settings link */}
+          <Link
+            href="/settings"
+            className="w-8 h-8 flex items-center justify-center rounded-full bg-foreground/[0.05] border border-foreground/[0.07] text-foreground/60 hover:text-foreground hover:bg-foreground/[0.08] transition-colors"
+          >
+            <Settings size={14} />
+          </Link>
         </div>
       </div>
 
       {/* ── HERO PROFIT CARD ── */}
-      <div
-        ref={heroRef}
-        onMouseMove={handleHeroMove}
-        onMouseLeave={handleHeroLeave}
-        onTouchMove={handleHeroMove}
-        onTouchEnd={handleHeroLeave}
-        className="hero-card animate-breathing rounded-[24px] p-6 text-white relative cursor-pointer select-none overflow-hidden"
-        style={{
-          background: isProfit
-            ? "linear-gradient(135deg, #047857 0%, #059669 25%, #10b981 75%, #34d399 100%)"
-            : "linear-gradient(135deg, #991b1b 0%, #b91c1c 25%, #dc2626 75%, #ef4444 100%)",
-          boxShadow: isProfit
-            ? "0 12px 40px rgba(5,150,105,0.4), 0 2px 8px rgba(5,150,105,0.2)"
-            : "0 12px 40px rgba(239,68,68,0.4), 0 2px 8px rgba(239,68,68,0.2)",
-          transformStyle: "preserve-3d",
-        }}
-      >
+      <TiltCard maxTilt={8} scale={1.02} className="hero-card-wrapper z-10 relative">
+        <div
+          ref={heroRef}
+          onMouseMove={handleHeroMove}
+          onMouseLeave={handleHeroLeave}
+          onTouchMove={handleHeroMove}
+          onTouchEnd={handleHeroLeave}
+          className="hero-card animate-breathing rounded-[24px] p-6 text-white relative cursor-pointer select-none overflow-hidden"
+          style={{
+            background: isProfit
+              ? "linear-gradient(135deg, #047857 0%, #059669 25%, #10b981 75%, #34d399 100%)"
+              : "linear-gradient(135deg, #991b1b 0%, #b91c1c 25%, #dc2626 75%, #ef4444 100%)",
+            boxShadow: isProfit
+              ? "0 12px 40px rgba(5,150,105,0.4), 0 2px 8px rgba(5,150,105,0.2)"
+              : "0 12px 40px rgba(239,68,68,0.4), 0 2px 8px rgba(239,68,68,0.2)",
+            transformStyle: "preserve-3d",
+          }}
+        >
         {/* Dynamic Shine Effect */}
         <div 
           className="absolute inset-0 pointer-events-none opacity-0 transition-opacity duration-300"
@@ -631,7 +658,7 @@ export default function HomePage() {
                 </div>
               </div>
               <div className="text-[34px] font-black tracking-[-0.03em] leading-none drop-shadow-md">
-                <AnimatedNumber value={profit} />
+                <CountUp end={profit} prefix="Rp" duration={1200} />
               </div>
             </div>
             <div className="bg-white/15 backdrop-blur-sm p-2.5 rounded-2xl mt-0.5 border border-white/20 shadow-inner">
@@ -661,7 +688,8 @@ export default function HomePage() {
             </div>
           </div>
         </div>
-      </div>
+        </div>
+      </TiltCard>
 
       {/* ── STAT PILLS (Income / Expense) ── */}
       <div className="grid grid-cols-2 gap-2.5">

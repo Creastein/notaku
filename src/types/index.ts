@@ -10,7 +10,9 @@ export interface Transaction {
   merchantName?: string;
   receiptUrl?: string; // If an image was uploaded
   createdAt: Date | string;
+  userId?: string;
 }
+
 
 // Structured output schema for Gemini OCR
 export * from './api';
@@ -32,4 +34,14 @@ export interface AIAdvisorMessage {
   role: "user" | "model";
   content: string;
   createdAt: Date | string;
+}
+
+export interface UserProfile {
+  userId?: string;
+  ownerName: string;
+  businessName: string;
+  businessCategory: string;
+  businessAge: string;
+  targetMonthlyRevenue: number;
+  onboardedAt: string;
 }

@@ -1,11 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { scanReceipt } from "@/lib/gemini";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"];
 
 export async function POST(request: NextRequest) {
   try {
+    // Rate limit: 5 scans per minute per IP
+    const ip = request.headers.get("x-forwarded-for") ?? request.headers.get("x-real-ip") ?? "anonymous";
+    const rateCheck = checkRateLimit(`scan:${ip}`, { maxRequests: 5, windowMs: 60_000 });
+    if (!rateCheck.allowed) {
+      return NextResponse.json(
+        { error: "Terlalu banyak permintaan. Coba lagi dalam 1 menit." },
+        { status: 429, headers: { "Retry-After": String(Math.ceil((rateCheck.resetAt - Date.now()) / 1000)) } }
+      );
+    }
     const formData = await request.formData();
     const file = formData.get("receipt") as File;
 

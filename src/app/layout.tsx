@@ -3,7 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import BottomNav from "@/components/BottomNav";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
-import PWAInstallPrompt from "@/components/PWAInstallPrompt";
+import { ThemeProvider } from "@/components/ThemeProvider";
 const inter = Inter({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -52,19 +52,37 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
+const themeScript = `
+  (function() {
+    try {
+      var theme = localStorage.getItem('notaku_theme') || 'system';
+      var isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      if (isDark) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    } catch (e) {}
+  })();
+`;
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="id">
-      <body className={`${inter.variable} antialiased`}>
-        <div className="max-w-md mx-auto relative min-h-[100dvh] pb-20 bg-card-solid shadow-2xl border-x border-border overflow-hidden">
-          <main>{children}</main>
-          <BottomNav />
-          <PWAInstallPrompt />
-        </div>
+    <html lang="id" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
+      <body className={`${inter.variable} antialiased`} suppressHydrationWarning>
+        <ThemeProvider>
+          <div className="max-w-md mx-auto relative min-h-[100dvh] pb-28 bg-card-solid shadow-2xl border-x border-border overflow-x-hidden">
+            <main>{children}</main>
+            <BottomNav />
+          </div>
+        </ThemeProvider>
         <ServiceWorkerRegister />
       </body>
     </html>

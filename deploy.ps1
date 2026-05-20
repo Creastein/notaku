@@ -12,23 +12,23 @@
 $ErrorActionPreference = "Stop"
 
 # --- Configuration ---
-$PROJECT_ID = "jvcwellinotaku"
+$PROJECT_ID = "sapient-reducer-495808-i1"
 $REGION = "asia-southeast2"  # Jakarta
 $SERVICE_NAME = "notaku"
 
 Write-Host ""
-Write-Host "🚀 Deploying NotaKu to Google Cloud Run..." -ForegroundColor Green
+Write-Host " Deploying NotaKu to Google Cloud Run..." -ForegroundColor Green
 Write-Host "   Project: $PROJECT_ID"
 Write-Host "   Region:  $REGION"
 Write-Host "   Service: $SERVICE_NAME"
 Write-Host ""
 
 # --- Step 1: Set project ---
-Write-Host "📋 Setting gcloud project..." -ForegroundColor Yellow
+Write-Host " Setting gcloud project..." -ForegroundColor Yellow
 gcloud config set project $PROJECT_ID
 
 # --- Step 2: Deploy ---
-Write-Host "🏗️  Building and deploying (ini bisa 5-10 menit)..." -ForegroundColor Yellow
+Write-Host " Building and deploying (ini bisa 5-10 menit)..." -ForegroundColor Yellow
 gcloud run deploy $SERVICE_NAME `
   --source . `
   --region $REGION `
@@ -43,11 +43,11 @@ gcloud run deploy $SERVICE_NAME `
   --set-build-env-vars "NEXT_PUBLIC_FIREBASE_API_KEY=AIzaSyB1W9KlNBV0zuEhii56qO0gdo2M5f8spJE,NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=jvcwellinotaku.firebaseapp.com,NEXT_PUBLIC_FIREBASE_PROJECT_ID=jvcwellinotaku,NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=jvcwellinotaku.firebasestorage.app,NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=799970342476,NEXT_PUBLIC_FIREBASE_APP_ID=1:799970342476:web:0c51fb57f7fe2576f826e9"
 
 Write-Host ""
-Write-Host "✅ Deployment selesai!" -ForegroundColor Green
-Write-Host "🌐 Buka URL yang ditampilkan di atas dari HP Anda." -ForegroundColor Green
+Write-Host " Deployment selesai!" -ForegroundColor Green
+Write-Host " Buka URL yang ditampilkan di atas dari HP Anda." -ForegroundColor Green
 Write-Host ""
 Write-Host "Langkah selanjutnya:"
 Write-Host "  1. Test live URL di HP"
-Write-Host "  2. Record video demo (2-3 menit) — lihat docs/video_script.md"
-Write-Host "  3. Post LinkedIn (public) — lihat docs/linkedin_post.md"
+Write-Host "  2. Record video demo (2-3 menit) - lihat docs/video_script.md"
+Write-Host "  3. Post LinkedIn (public) - lihat docs/linkedin_post.md"
 Write-Host "  4. Submit via official form"

@@ -1,10 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { geminiModel } from "@/lib/gemini";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 const MAX_MESSAGE_LENGTH = 1000;
 
 export async function POST(request: NextRequest) {
   try {
+    // Rate limit: 10 advisor chats per minute per IP
+    const ip = request.headers.get("x-forwarded-for") ?? request.headers.get("x-real-ip") ?? "anonymous";
+    const rateCheck = checkRateLimit(`advisor:${ip}`, { maxRequests: 10, windowMs: 60_000 });
+    if (!rateCheck.allowed) {
+      return NextResponse.json(
+        { error: "Terlalu banyak permintaan. Coba lagi dalam 1 menit." },
+        { status: 429, headers: { "Retry-After": String(Math.ceil((rateCheck.resetAt - Date.now()) / 1000)) } }
+      );
+    }
+
     if (!process.env.GEMINI_API_KEY) {
 
       return NextResponse.json(
@@ -23,7 +34,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { message, transactionHistory } = body;
+    const { message, transactionHistory, userProfile } = body;
 
     if (!message || typeof message !== "string" || message.trim().length === 0) {
       return NextResponse.json(
@@ -42,31 +53,73 @@ export async function POST(request: NextRequest) {
     const model = geminiModel;
 
 
-    const systemPrompt = `Kamu adalah "NotaKu AI Advisor", penasihat keuangan cerdas untuk UMKM Indonesia.
+    const targetRevenueStr = userProfile?.targetMonthlyRevenue 
+      ? `Rp ${userProfile.targetMonthlyRevenue.toLocaleString('id-ID')}` 
+      : "Tidak diketahui";
 
-PERAN:
-- Memberikan insight bisnis berdasarkan data transaksi pengguna
-- Menjawab pertanyaan seputar keuangan, pajak, dan strategi bisnis UMKM
-- Menggunakan bahasa Indonesia yang ramah dan mudah dipahami
-- Memberikan saran yang actionable dan praktis
+    const systemPrompt = `Kamu adalah "NotaKu AI Advisor", penasihat keuangan cerdas untuk UMKM Indonesia. Misi utama kamu adalah bertindak seperti CFO (Chief Financial Officer) proaktif bagi pengguna.
 
-DATA TRANSAKSI PENGGUNA:
+PROFIL BISNIS PENGGUNA:
+- Nama Pemilik: ${userProfile?.ownerName || "Tidak diketahui"}
+- Nama Usaha: ${userProfile?.businessName || "Tidak diketahui"}
+- Kategori: ${userProfile?.businessCategory || "Tidak diketahui"}
+- Lama Berdiri: ${userProfile?.businessAge || "Tidak diketahui"}
+- Target Omset Bulanan: ${targetRevenueStr}
+
+DATA TRANSAKSI:
 ${transactionHistory || "Belum ada data transaksi."}
 
-INSTRUKSI:
-- Jawab singkat tapi informatif (maksimal 3 paragraf)
-- Gunakan emoji untuk membuat jawaban lebih menarik
-- Jika ditanya tentang data yang tidak ada, sarankan pengguna untuk mencatat lebih banyak transaksi
-- Selalu akhiri dengan satu saran actionable`;
+PERAN & SIKAP:
+- Jadilah proaktif. Jika omset bulanan terpantau jauh dari target, beri peringatan secara halus dan sarankan cara mengejarnya.
+- Berikan tips spesifik sesuai kategori bisnis pengguna (${userProfile?.businessCategory || "bisnis ini"}).
+- Sapa pengguna dengan namanya (${userProfile?.ownerName || "pengguna"}).
+- Gunakan bahasa Indonesia yang ramah, profesional, dan mudah dipahami.
+- Jawaban singkat, padat, dan jelas (maksimal 3 paragraf).
+- Selalu gunakan emoji yang relevan.
+- Selalu akhiri dengan satu langkah nyata (actionable advice) yang bisa dilakukan hari ini.
+
+FORMAT OUTPUT (HARUS JSON MURNI):
+{
+  "reply": "<Teks jawaban lengkap. Gunakan Markdown sederhana seperti cetak tebal ** untuk poin penting. Sapa pengguna dengan namanya, gunakan emoji relevan, dan akhiri dengan 1 langkah nyata.>",
+  "followUps": [
+    "<Saran pertanyaan lanjutan kontekstual 1, buat pendek dan spesifik. Contoh: 'Bagaimana cara menekan biaya operasional?', 'Berapa margin keuntungan saya?'>",
+    "<Saran pertanyaan lanjutan kontekstual 2>",
+    "<Saran pertanyaan lanjutan kontekstual 3>"
+  ]
+}`;
 
     const result = await model.generateContent([
       systemPrompt,
       `Pertanyaan pengguna: ${message}`,
     ]);
 
-    const response = result.response.text();
+    let responseText = result.response.text().trim();
+    
+    // Clean markdown
+    responseText = responseText
+      .replace(/^```json\s*/i, "")
+      .replace(/^```\s*/i, "")
+      .replace(/\s*```$/i, "");
 
-    return NextResponse.json({ success: true, response });
+    try {
+      const parsed = JSON.parse(responseText);
+      return NextResponse.json({
+        success: true,
+        response: parsed.reply,
+        followUps: parsed.followUps || []
+      });
+    } catch {
+      // Fallback
+      return NextResponse.json({
+        success: true,
+        response: result.response.text(),
+        followUps: [
+          "Bagaimana kondisi keuangan bisnis saya?",
+          "Tips menghemat biaya operasional",
+          "Cara mencapai target omset bulanan"
+        ]
+      });
+    }
   } catch (error) {
     console.error("Advisor error:", error);
     return NextResponse.json(

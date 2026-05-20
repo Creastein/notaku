@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+  <title>NotaKu — Offline</title>
+  <style>
+    :root {
+      --bg: #0a0f1c;
+      --fg: #e2e8f0;
+      --primary: #10b981;
+      --primary-light: #34d399;
+      --card-bg: rgba(255,255,255,0.04);
+      --border: rgba(255,255,255,0.06);
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--fg);
+      min-height: 100dvh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      overflow: hidden;
+    }
+    /* Animated background */
+    body::before {
+      content: '';
+      position: fixed;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(ellipse at 30% 20%, rgba(16,185,129,0.08) 0%, transparent 50%),
+                  radial-gradient(ellipse at 70% 80%, rgba(99,102,241,0.06) 0%, transparent 50%);
+      animation: drift 20s ease-in-out infinite alternate;
+      pointer-events: none;
+    }
+    @keyframes drift {
+      0% { transform: translate(0, 0) rotate(0deg); }
+      100% { transform: translate(-5%, 3%) rotate(3deg); }
+    }
+    .container {
+      max-width: 380px;
+      text-align: center;
+      position: relative;
+      z-index: 1;
+    }
+    .icon-wrap {
+      margin-bottom: 32px;
+      position: relative;
+    }
+    .icon {
+      font-size: 72px;
+      display: block;
+      animation: float 3s ease-in-out infinite;
+      filter: drop-shadow(0 8px 24px rgba(16,185,129,0.2));
+    }
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+    .shadow {
+      width: 64px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--primary);
+      opacity: 0.15;
+      margin: 8px auto 0;
+      filter: blur(6px);
+      animation: shadow-pulse 3s ease-in-out infinite;
+    }
+    @keyframes shadow-pulse {
+      0%, 100% { transform: scale(1); opacity: 0.15; }
+      50% { transform: scale(0.8); opacity: 0.08; }
+    }
+    h1 {
+      font-size: 22px;
+      font-weight: 800;
+      margin-bottom: 8px;
+      letter-spacing: -0.02em;
+    }
+    h1 span {
+      background: linear-gradient(135deg, var(--primary), var(--primary-light));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    p {
+      font-size: 14px;
+      color: rgba(226,232,240,0.5);
+      line-height: 1.6;
+      margin-bottom: 24px;
+    }
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 16px 20px;
+      backdrop-filter: blur(12px);
+      margin-bottom: 24px;
+      text-align: left;
+    }
+    .card-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .card-icon {
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+    .card-text {
+      font-size: 13px;
+      color: rgba(226,232,240,0.6);
+      line-height: 1.5;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      padding: 14px 24px;
+      border: none;
+      border-radius: 14px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: linear-gradient(135deg, #059669, #10b981);
+      color: white;
+      box-shadow: 0 4px 14px rgba(5,150,105,0.3);
+    }
+    .btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(5,150,105,0.4);
+    }
+    .btn:active {
+      transform: translateY(0);
+    }
+    .btn svg {
+      width: 16px;
+      height: 16px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="icon-wrap">
+      <span class="icon">📡</span>
+      <div class="shadow"></div>
+    </div>
+
+    <h1>Kamu Sedang <span>Offline</span></h1>
+    <p>Koneksi internet tidak tersedia. Tapi tenang, data lokal kamu tetap aman di perangkat ini.</p>
+
+    <div class="card">
+      <div class="card-row">
+        <span class="card-icon">💡</span>
+        <span class="card-text">Cek koneksi WiFi atau data seluler kamu, lalu tekan tombol di bawah untuk mencoba lagi.</span>
+      </div>
+    </div>
+
+    <button class="btn" onclick="window.location.reload()">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+        <path d="M3 3v5h5"/>
+        <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/>
+        <path d="M16 16h5v5"/>
+      </svg>
+      Coba Lagi
+    </button>
+  </div>
+</body>
+</html>

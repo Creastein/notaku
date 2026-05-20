@@ -1,12 +1,16 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { Camera, Upload, Loader2, Check, X, Plus, Zap } from "lucide-react";
+import { Camera, Upload, Loader2, Check, X, Plus, Zap, Settings } from "lucide-react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { GeminiReceiptResult } from "@/types";
 import { addTransaction } from "@/lib/storage";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { TiltCard } from "@/components/effects/TiltCard";
+import { GradientOrbs } from "@/components/effects/GradientOrbs";
+import { triggerHaptic } from "@/lib/haptics";
 
 export default function ScanPage() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -95,6 +99,7 @@ export default function ScanPage() {
 
   async function handleSave() {
     if (!result) return;
+    triggerHaptic(15);
 
     await addTransaction({
       type: "expense",
@@ -132,20 +137,29 @@ export default function ScanPage() {
   }
 
   return (
-    <div ref={containerRef} className="p-5 space-y-5">
+    <div ref={containerRef} className="p-5 space-y-5 relative overflow-hidden">
+      <GradientOrbs />
       {/* Header */}
-      <div className="pt-3">
-        <h1 className="text-xl font-extrabold tracking-tight">
-          Scan <span className="gradient-text">Nota</span>
-        </h1>
-        <p className="text-sm text-foreground/50 font-medium mt-0.5">
-          Foto struk/nota dan biarkan AI mengekstrak datanya
-        </p>
+      <div className="pt-3 relative z-10 flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-extrabold tracking-tight">
+            Scan <span className="gradient-text">Nota</span>
+          </h1>
+          <p className="text-sm text-foreground/50 font-medium mt-0.5">
+            Foto struk/nota dan biarkan AI mengekstrak datanya
+          </p>
+        </div>
+        <Link
+          href="/settings"
+          className="w-8 h-8 flex items-center justify-center rounded-full bg-foreground/[0.05] border border-foreground/[0.07] text-foreground/60 hover:text-foreground hover:bg-foreground/[0.08] transition-colors"
+        >
+          <Settings size={14} />
+        </Link>
       </div>
 
       {/* Upload Area */}
       {!imagePreview ? (
-        <div>
+        <div className="relative z-10">
           <div className="glass-card rounded-2xl p-8 text-center border-2 border-dashed border-primary/20 hover:border-primary/40 transition-all duration-300">
             <div
               className="mx-auto w-16 h-16 rounded-2xl flex items-center justify-center mb-4 animate-float"
@@ -214,7 +228,7 @@ export default function ScanPage() {
           </div>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-4 relative z-10">
           {/* Image Preview */}
           <div className="relative rounded-2xl overflow-hidden glass-card">
             {scanning && (
@@ -282,9 +296,10 @@ export default function ScanPage() {
 
           {/* Result */}
           {result && (
-            <div className="glass-card rounded-2xl p-5 space-y-4">
-              <div className="result-stagger flex items-center gap-2">
-                <div className="bg-emerald-500/10 p-2 rounded-xl">
+            <TiltCard maxTilt={5} scale={1.01} className="result-tilt-wrapper">
+              <div className="glass-card rounded-2xl p-5 space-y-4">
+                <div className="result-stagger flex items-center gap-2">
+                  <div className="bg-emerald-500/10 p-2 rounded-xl">
                   <Check size={18} className="text-emerald-500" />
                 </div>
                 <div>
@@ -385,7 +400,8 @@ export default function ScanPage() {
                 </button>
               </div>
             </div>
-          )}
+          </TiltCard>
+        )}
         </div>
       )}
     </div>

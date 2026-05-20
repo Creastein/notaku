@@ -8,10 +8,10 @@ const genAI = new GoogleGenerativeAI(apiKey);
  * Get a configured generative model.
  * Using 'v1' explicitly to avoid 'v1beta' 404 issues with gemini-1.5-flash.
  */
-export function getModel(modelName = "gemini-1.5-flash-latest") {
+export function getModel(modelName = "gemini-2.5-flash") {
   return genAI.getGenerativeModel(
     { model: modelName },
-    { apiVersion: "v1" }
+    { apiVersion: "v1beta" }
   );
 }
 
@@ -45,13 +45,13 @@ const receiptSchema: ResponseSchema = {
 export async function scanReceipt(base64Image: string, mimeType: string) {
   const model = genAI.getGenerativeModel(
     {
-      model: "gemini-1.5-flash-latest",
+      model: "gemini-2.5-flash",
       generationConfig: {
         responseMimeType: "application/json",
         responseSchema: receiptSchema,
       }
     },
-    { apiVersion: "v1" }
+    { apiVersion: "v1beta" }
   );
 
 

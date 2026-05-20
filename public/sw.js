@@ -1,8 +1,9 @@
-const CACHE_NAME = "notaku-cache-v1";
+const CACHE_NAME = "notaku-cache-v2";
 
-// Add basic files to cache for offline fallback
+// Precache offline page + core assets
 const urlsToCache = [
   "/",
+  "/offline.html",
   "/manifest.json",
   "/icon-192x192.png",
   "/icon-512x512.png",
@@ -43,7 +44,7 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Network First, fallback to cache
+  // Network First, fallback to cache, then offline page
   event.respondWith(
     fetch(event.request)
       .then((response) => {
@@ -65,10 +66,9 @@ self.addEventListener("fetch", (event) => {
           if (cachedResponse) {
             return cachedResponse;
           }
-          // If not in cache and navigating to a page, return offline fallback if we had one
-          // Since it's a SPA-like app, returning the root might work, or just let it fail
+          // Navigation requests → branded offline page
           if (event.request.mode === "navigate") {
-            return caches.match("/");
+            return caches.match("/offline.html");
           }
           return new Response("Network error happened", {
             status: 408,
