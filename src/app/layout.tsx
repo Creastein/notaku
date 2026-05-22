@@ -5,6 +5,7 @@ import BottomNav from "@/components/BottomNav";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { ToastProvider } from "@/components/Toast";
+import { AuthProvider } from "@/lib/auth-context";
 const inter = Inter({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -79,12 +80,14 @@ export default function RootLayout({
       </head>
       <body className={`${inter.variable} antialiased`} suppressHydrationWarning>
         <ThemeProvider>
-          <ToastProvider>
-            <div className="max-w-md mx-auto relative min-h-[100dvh] pb-28 app-container shadow-2xl border-x border-border overflow-x-hidden">
-              <main>{children}</main>
-              <BottomNav />
-            </div>
-          </ToastProvider>
+          <AuthProvider>
+            <ToastProvider>
+              <div className="max-w-md mx-auto relative min-h-[100dvh] pb-28 app-container shadow-2xl border-x border-border overflow-x-hidden">
+                <main>{children}</main>
+                <BottomNav />
+              </div>
+            </ToastProvider>
+          </AuthProvider>
         </ThemeProvider>
         <ServiceWorkerRegister />
       </body>

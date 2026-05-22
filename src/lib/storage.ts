@@ -6,6 +6,7 @@ import {
   collection,
   setDoc,
   getDocs,
+  getDoc,
   deleteDoc,
   updateDoc,
   doc,
@@ -429,6 +430,7 @@ export function hasDemoData(): boolean {
 // ===== User Profile helpers =====
 
 const PROFILE_KEY = "notaku_user_profile";
+const USERS_COLLECTION = "users";
 
 export function getUserProfile(): UserProfile | null {
   if (typeof window === "undefined") return null;
@@ -485,6 +487,72 @@ export function saveUserProfile(profile: UserProfile): void {
   }
 
   localStorage.setItem(PROFILE_KEY, JSON.stringify(updatedProfile));
+
+  // Also save to Firestore for persistence across reinstalls
+  saveProfileToFirestore(updatedProfile);
+}
+
+/**
+ * Save user profile to Firestore (keyed by userId).
+ * This runs in the background and does not block the UI.
+ */
+async function saveProfileToFirestore(profile: UserProfile): Promise<void> {
+  if (!isFirebaseConfigured() || !db || !profile.userId) return;
+  try {
+    await setDoc(doc(db, USERS_COLLECTION, profile.userId), {
+      ...profile,
+      updatedAt: new Date().toISOString(),
+    });
+  } catch (err) {
+    console.error("Failed to save profile to Firestore:", err);
+  }
+}
+
+/**
+ * Load user profile from Firestore by Firebase Auth UID.
+ * Used after Google Sign-In to restore profile on a new device/reinstall.
+ */
+export async function loadProfileFromFirestore(uid: string): Promise<UserProfile | null> {
+  if (!isFirebaseConfigured() || !db) return null;
+  try {
+    // First try to find profile by userId (which is the Firebase Auth UID)
+    const docRef = doc(db, USERS_COLLECTION, uid);
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+      const data = docSnap.data() as UserProfile;
+      // Save to localStorage cache
+      localStorage.setItem(PROFILE_KEY, JSON.stringify(data));
+      localStorage.setItem("notaku_onboarded", "true");
+      return data;
+    }
+    return null;
+  } catch (err) {
+    console.error("Failed to load profile from Firestore:", err);
+    return null;
+  }
+}
+
+/**
+ * Migrate existing local transactions to use the new Firebase Auth UID.
+ * Called after first Google Sign-In to link existing data.
+ */
+export async function migrateTransactionsToUid(newUid: string): Promise<void> {
+  const localTxs = getTransactionsLocal();
+  if (localTxs.length === 0) return;
+
+  // Update all local transactions with new userId
+  const updated = localTxs.map(tx => ({ ...tx, userId: newUid }));
+  localStorage.setItem(LOCAL_KEY, JSON.stringify(updated));
+
+  // Sync to Firestore
+  if (!isFirebaseConfigured() || !db) return;
+  for (const tx of updated) {
+    try {
+      await setDoc(doc(db, COLLECTION_NAME, tx.id), normalizeTransaction(tx));
+    } catch (err) {
+      console.error("Migration sync error for tx", tx.id, err);
+    }
+  }
 }
 
 export function clearAllData(): void {
