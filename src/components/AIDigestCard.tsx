@@ -128,17 +128,17 @@ export function AIDigestCard({ transactions }: AIDigestCardProps) {
   return (
     <div className="relative rounded-2xl p-[1.5px] overflow-hidden animate-fade-in-up">
       {/* Animated gradient border */}
-      <div className="absolute inset-0 bg-gradient-to-r from-emerald-400 via-teal-500 to-indigo-500 opacity-60 blur-[3px]" />
-      <div className="absolute inset-0 bg-gradient-to-r from-emerald-400 via-teal-500 to-indigo-500 opacity-40 animate-pulse" />
+      <div className="absolute inset-0 bg-gradient-to-r from-[#38bdf8] via-cyan-500 to-[#3b7597] opacity-60 blur-[3px]" />
+      <div className="absolute inset-0 bg-gradient-to-r from-[#38bdf8] via-cyan-500 to-[#3b7597] opacity-40 animate-pulse" />
       
-      <div className="relative bg-background/95 backdrop-blur-xl rounded-2xl p-5 h-full">
+      <div className="relative bg-white/35 dark:bg-slate-950/40 backdrop-blur-2xl rounded-2xl p-5 h-full">
         {/* Header */}
         <div className="flex items-start gap-3 mb-4">
-          <div className="bg-gradient-to-br from-emerald-400 to-teal-600 p-2 rounded-xl shadow-sm mt-0.5">
+          <div className="bg-gradient-to-br from-[#38bdf8] to-[#093c5d] p-2 rounded-xl shadow-sm mt-0.5">
             <Sparkles size={18} className="text-white" />
           </div>
           <div>
-            <p className="text-sm font-bold bg-clip-text text-transparent bg-gradient-to-r from-emerald-600 to-teal-600 mb-1">
+            <p className="text-sm font-bold bg-clip-text text-transparent bg-gradient-to-r from-[#093c5d] to-[#3b7597] mb-1">
               Insight Mingguan AI
             </p>
             <p className="text-sm font-medium leading-snug text-foreground/80">
@@ -152,7 +152,7 @@ export function AIDigestCard({ transactions }: AIDigestCardProps) {
           <div className="space-y-2.5 mb-4">
             {digest.insights.map((insight, idx) => (
               <div key={idx} className="flex items-start gap-2.5 bg-foreground/[0.03] p-3 rounded-xl">
-                <div className="mt-0.5 text-indigo-500">
+                <div className="mt-0.5 text-[#3b7597]">
                   <TrendingUp size={16} />
                 </div>
                 <p className="text-[13px] font-medium text-foreground/75 leading-relaxed">
@@ -165,12 +165,12 @@ export function AIDigestCard({ transactions }: AIDigestCardProps) {
 
         {/* Recommendation */}
         {digest.recommendation && (
-          <div className="bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/20 p-3.5 rounded-xl flex items-start gap-3">
-            <div className="mt-0.5 text-amber-600">
+          <div className="bg-gradient-to-r from-slate-400/10 to-slate-500/10 border border-slate-400/20 p-3.5 rounded-xl flex items-start gap-3">
+            <div className="mt-0.5 text-slate-500">
               <Lightbulb size={18} />
             </div>
             <div>
-              <p className="text-xs font-bold text-amber-700 dark:text-amber-500 mb-0.5">Rekomendasi Tindakan</p>
+              <p className="text-xs font-bold text-slate-600 dark:text-slate-400 mb-0.5">Rekomendasi Tindakan</p>
               <p className="text-[13px] font-medium text-foreground/80 leading-relaxed">
                 {digest.recommendation}
               </p>

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, User, Moon, Sun, Laptop, Trash2, Info, Download, Save, RefreshCcw } from "lucide-react";
+import { useToast } from "@/components/Toast";
 import { useTheme } from "@/components/ThemeProvider";
 import { usePWAInstall } from "@/hooks/usePWAInstall";
 import { getUserProfile, saveUserProfile, clearAllData, UserProfile } from "@/lib/storage";
@@ -11,6 +12,7 @@ export default function SettingsPage() {
   const router = useRouter();
   const { theme, setTheme } = useTheme();
   const { isInstallable, handleInstallClick } = usePWAInstall();
+  const { showToast } = useToast();
 
   const [profile, setProfile] = useState<UserProfile>({
     ownerName: "",
@@ -36,8 +38,36 @@ export default function SettingsPage() {
 
   const handleSaveProfile = () => {
     setIsSaving(true);
-    saveUserProfile(profile);
-    setTimeout(() => setIsSaving(false), 600); // Simulate network/save delay
+    try {
+      // Validasi sederhana
+      if (!profile.ownerName.trim() || !profile.businessName.trim()) {
+        showToast({
+          type: "warning",
+          title: "Data belum lengkap",
+          message: "Nama pemilik dan nama bisnis harus diisi.",
+        });
+        setIsSaving(false);
+        return;
+      }
+
+      saveUserProfile(profile);
+
+      setTimeout(() => {
+        setIsSaving(false);
+        showToast({
+          type: "success",
+          title: "Profil berhasil disimpan! ✨",
+          message: "Perubahan data bisnis Anda telah tersimpan.",
+        });
+      }, 600);
+    } catch {
+      setIsSaving(false);
+      showToast({
+        type: "error",
+        title: "Gagal menyimpan profil",
+        message: "Terjadi kesalahan, silakan coba lagi.",
+      });
+    }
   };
 
   const handleResetOnboarding = () => {
@@ -53,9 +83,9 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="min-h-[100dvh] flex flex-col bg-background">
+    <div className="min-h-[100dvh] flex flex-col app-container">
       {/* Header */}
-      <header className="sticky top-0 z-30 bg-background/80 backdrop-blur-xl border-b border-border/50">
+      <header className="sticky top-0 z-30 bg-white/20 dark:bg-slate-950/20 backdrop-blur-xl border-b border-white/10">
         <div className="flex items-center gap-3 px-4 h-16">
           <button
             onClick={() => router.back()}
@@ -169,7 +199,7 @@ export default function SettingsPage() {
         {/* App Info Card */}
         <div className="glass-card rounded-2xl p-5 border border-border shadow-sm space-y-4">
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500">
+            <div className="w-10 h-10 rounded-xl bg-sky-400/10 flex items-center justify-center text-sky-500">
               <Info size={20} />
             </div>
             <h2 className="font-semibold text-foreground">Info Aplikasi</h2>
@@ -183,7 +213,7 @@ export default function SettingsPage() {
           {isInstallable && (
             <button
               onClick={handleInstallClick}
-              className="w-full mt-2 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 py-2.5 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-colors"
+              className="w-full mt-2 bg-sky-400/10 text-sky-600 dark:text-sky-400 hover:bg-sky-400/20 py-2.5 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-colors"
             >
               <Download size={16} />
               Install Aplikasi (PWA)

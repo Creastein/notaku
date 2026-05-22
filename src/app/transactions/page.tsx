@@ -5,12 +5,13 @@ import { Transaction } from "@/types";
 import { getTransactions, addTransaction, deleteTransaction, updateTransaction } from "@/lib/storage";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
-import { ArrowUpRight, ArrowDownRight, Plus, Trash2, X, Mic, MicOff, Search, Settings, Pencil } from "lucide-react";
+import { ArrowUpRight, ArrowDownRight, ArrowLeft, Plus, Trash2, X, Mic, MicOff, Search, Settings, Pencil } from "lucide-react";
+import { useToast } from "@/components/Toast";
+import { triggerHaptic } from "@/lib/haptics";
 import Link from "next/link";
 import { format, isToday, isYesterday, subDays, isAfter } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 import { GradientOrbs } from "@/components/effects/GradientOrbs";
-import { TiltCard } from "@/components/effects/TiltCard";
 
 function fmtRp(n: number) {
   return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(n);
@@ -52,11 +53,24 @@ export default function TransactionsPage() {
   const [saving, setSaving] = useState(false);
   
   const containerRef = useRef<HTMLDivElement>(null);
+  const { showToast } = useToast();
 
   useEffect(() => {
     setFDate(new Date().toISOString().split("T")[0]);
     load();
   }, []);
+
+  // Lock body scroll when overlay is active
+  useEffect(() => {
+    if (showForm) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "unset";
+    }
+    return () => {
+      document.body.style.overflow = "unset";
+    };
+  }, [showForm]);
 
   async function load() { setLoading(true); setTxs(await getTransactions()); setLoading(false); }
 
@@ -70,6 +84,7 @@ export default function TransactionsPage() {
   }
 
   function openEdit(tx: Transaction) {
+    triggerHaptic(5);
     setEditingTx(tx);
     setFType(tx.type);
     setFAmt(String(tx.amount));
@@ -81,6 +96,7 @@ export default function TransactionsPage() {
   }
 
   function closeForm() {
+    triggerHaptic(5);
     setShowForm(false);
     setEditingTx(null);
     resetForm();
@@ -88,12 +104,16 @@ export default function TransactionsPage() {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!fAmt || Number(fAmt) <= 0) return;
+    if (!fAmt || Number(fAmt) <= 0) {
+      triggerHaptic(20);
+      showToast({ type: "warning", title: "Jumlah tidak valid", message: "Masukkan nominal transaksi yang benar." });
+      return;
+    }
+    triggerHaptic(15);
     setSaving(true);
 
     try {
       if (editingTx) {
-        // Update existing
         await updateTransaction(editingTx.id, {
           type: fType,
           amount: Number(fAmt),
@@ -102,8 +122,8 @@ export default function TransactionsPage() {
           notes: fNotes,
           merchantName: fMerch,
         });
+        showToast({ type: "success", title: "Transaksi diperbarui ✏️", message: `${fMerch || fCat} berhasil diupdate.` });
       } else {
-        // Add new
         await addTransaction({
           type: fType,
           amount: Number(fAmt),
@@ -114,28 +134,49 @@ export default function TransactionsPage() {
           createdAt: new Date().toISOString(),
         });
 
-        // Confetti for new transactions only
         import("canvas-confetti").then((confetti) => {
           confetti.default({
             particleCount: 100,
             spread: 70,
             origin: { y: 0.6 },
-            colors: ["#10b981", "#3b82f6", "#f59e0b"]
+            colors: ["#38bdf8", "#94a3b8", "#c4b5fd"]
           });
         });
+        showToast({ type: "success", title: "Transaksi tersimpan! 🎉", message: `${fType === "income" ? "Pemasukan" : "Pengeluaran"} ${fMerch || fCat} berhasil dicatat.` });
       }
 
       closeForm();
       await load();
+    } catch {
+      triggerHaptic(20);
+      showToast({ type: "error", title: "Gagal menyimpan", message: "Terjadi kesalahan, silakan coba lagi." });
     } finally {
       setSaving(false);
     }
   }
 
-  async function del(id: string) { await deleteTransaction(id); await load(); }
+  async function del(id: string) {
+    triggerHaptic(20);
+    try {
+      await deleteTransaction(id);
+      await load();
+      showToast({ type: "success", title: "Transaksi dihapus 🗑️", message: "Data transaksi berhasil dihapus." });
+    } catch {
+      triggerHaptic(20);
+      showToast({ type: "error", title: "Gagal menghapus", message: "Terjadi kesalahan saat menghapus data." });
+    }
+  }
 
   function toggleVoice() {
-    if (!("webkitSpeechRecognition" in window) && !("SpeechRecognition" in window)) { alert("Browser tidak mendukung Voice Input"); return; }
+    triggerHaptic(10);
+    if (!("webkitSpeechRecognition" in window) && !("SpeechRecognition" in window)) {
+      showToast({
+        type: "warning",
+        title: "Voice Input tidak didukung",
+        message: "Browser Anda tidak mendukung perekaman suara."
+      });
+      return;
+    }
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     const r = new SR(); r.lang = "id-ID"; r.continuous = false;
     r.onresult = (e: any) => { setFNotes(p => p ? p + " " + e.results[0][0].transcript : e.results[0][0].transcript); setIsListening(false); };
@@ -230,57 +271,163 @@ export default function TransactionsPage() {
         <div className="flex gap-2">
           {(["all","income","expense"] as const).map(t => (
             <button key={t} onClick={() => setFilter(t)}
-              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all ${filter === t ? (t==="income"?"bg-emerald-500 text-white":t==="expense"?"bg-red-500 text-white":"bg-primary text-white") : "glass-card text-foreground/50"}`}
+              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all ${filter === t ? (t==="income"?"bg-sky-400 text-white":t==="expense"?"bg-rose-400 text-white":"bg-primary text-white") : "clear-glass text-foreground/50"}`}
             >{t==="all"?"Semua":t==="income"?"Masuk":"Keluar"}</button>
           ))}
         </div>
       </div>
 
       {showForm && (
-        <TiltCard maxTilt={5} scale={1.02} className="relative z-10">
-          <form onSubmit={submit} className="glass-card rounded-2xl p-4 space-y-3.5 animate-scale-in">
-            {/* Edit indicator */}
-            {editingTx && (
-              <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-blue-500/10 border border-blue-500/20">
-                <Pencil size={12} className="text-blue-400" />
-                <span className="text-xs font-semibold text-blue-400">Mengedit transaksi</span>
+        <>
+          {/* Backdrop overlay to dim background */}
+          <div className="form-backdrop-overlay" onClick={closeForm} style={{ zIndex: 60 }} />
+
+          <div className="relative" style={{ zIndex: 70 }}>
+            <form onSubmit={submit} className="glass-form-elevated animate-scale-in max-h-[85vh] flex flex-col overflow-hidden">
+              {/* Scrollable content area */}
+              <div className="p-5 pb-3 space-y-4 overflow-y-auto flex-1">
+                {/* Form header with back button */}
+                <div className="flex items-center gap-3 -mt-1 -mx-1">
+                  <button
+                    type="button"
+                    onClick={closeForm}
+                    className="p-2 rounded-xl bg-foreground/5 hover:bg-foreground/10 text-foreground/60 hover:text-foreground transition-all"
+                  >
+                    <ArrowLeft size={18} />
+                  </button>
+                  <h2 className="text-base font-extrabold tracking-tight">
+                    {editingTx ? "Edit Transaksi" : "Transaksi Baru"}
+                  </h2>
+                </div>
+
+                {/* Edit indicator */}
+                {editingTx && (
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-blue-500/10 border border-blue-500/20">
+                    <Pencil size={12} className="text-blue-400" />
+                    <span className="text-xs font-semibold text-blue-400">Mengedit transaksi</span>
+                  </div>
+                )}
+
+                {/* Type toggle */}
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setFType("expense")}
+                    className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${
+                      fType === "expense"
+                        ? "bg-rose-400 text-white shadow-md"
+                        : "bg-foreground/5 text-foreground/50 hover:bg-foreground/10"
+                    }`}
+                  >
+                    Pengeluaran
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFType("income")}
+                    className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${
+                      fType === "income"
+                        ? "bg-sky-400 text-white shadow-md"
+                        : "bg-foreground/5 text-foreground/50 hover:bg-foreground/10"
+                    }`}
+                  >
+                    Pemasukan
+                  </button>
+                </div>
+
+                {/* Jumlah */}
+                <div>
+                  <label className="text-xs text-foreground/50 font-semibold mb-1.5 block">Jumlah (Rp)</label>
+                  <input
+                    type="number"
+                    value={fAmt}
+                    onChange={e => setFAmt(e.target.value)}
+                    placeholder="50000"
+                    className="input-premium w-full text-xl font-extrabold"
+                    required
+                  />
+                </div>
+
+                {/* Kategori */}
+                <div>
+                  <label className="text-xs text-foreground/50 font-semibold mb-1.5 block">Kategori</label>
+                  <select
+                    value={fCat}
+                    onChange={e => setFCat(e.target.value)}
+                    className="input-premium w-full"
+                  >
+                    {CATEGORIES.map(c => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Toko & Tanggal */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs text-foreground/50 font-semibold mb-1.5 block">Toko/Sumber</label>
+                    <input
+                      type="text"
+                      value={fMerch}
+                      onChange={e => setFMerch(e.target.value)}
+                      placeholder="Warung Bu Ani"
+                      className="input-premium w-full"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-foreground/50 font-semibold mb-1.5 block">Tanggal</label>
+                    <input
+                      type="date"
+                      value={fDate}
+                      onChange={e => setFDate(e.target.value)}
+                      className="input-premium w-full"
+                    />
+                  </div>
+                </div>
+
+                {/* Catatan */}
+                <div>
+                  <label className="text-xs text-foreground/50 font-semibold mb-1.5 block">Catatan</label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={fNotes}
+                      onChange={e => setFNotes(e.target.value)}
+                      placeholder="Opsional..."
+                      className="input-premium w-full pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={toggleVoice}
+                      className={`absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full transition-all ${
+                        isListening
+                          ? "bg-red-500 text-white animate-pulse"
+                          : "bg-primary/10 text-primary hover:bg-primary/20"
+                      }`}
+                    >
+                      {isListening ? <MicOff size={14} /> : <Mic size={14} />}
+                    </button>
+                  </div>
+                </div>
               </div>
-            )}
-            <div className="flex gap-2">
-            <button type="button" onClick={() => setFType("expense")} className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${fType==="expense"?"bg-red-500 text-white shadow-md":"glass-card text-foreground/50"}`}>Pengeluaran</button>
-            <button type="button" onClick={() => setFType("income")} className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${fType==="income"?"bg-emerald-500 text-white shadow-md":"glass-card text-foreground/50"}`}>Pemasukan</button>
+
+              {/* Submit - sticky at bottom, always visible */}
+              <div className="p-5 pt-3 border-t border-foreground/[0.06]">
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="btn-primary w-full py-3 text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {saving ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Menyimpan...
+                    </span>
+                  ) : editingTx ? "Perbarui Transaksi" : "Simpan Transaksi"}
+                </button>
+              </div>
+            </form>
           </div>
-          <div>
-            <label className="text-xs text-foreground/40 font-semibold mb-1 block">Jumlah (Rp)</label>
-            <input type="number" value={fAmt} onChange={e => setFAmt(e.target.value)} placeholder="50000" className="input-premium w-full text-xl font-extrabold" required />
-          </div>
-          <div>
-            <label className="text-xs text-foreground/40 font-semibold mb-1 block">Kategori</label>
-            <select value={fCat} onChange={e => setFCat(e.target.value)} className="input-premium w-full">{CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}</select>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div><label className="text-xs text-foreground/40 font-semibold mb-1 block">Toko/Sumber</label><input type="text" value={fMerch} onChange={e => setFMerch(e.target.value)} placeholder="Warung Bu Ani" className="input-premium w-full" /></div>
-            <div><label className="text-xs text-foreground/40 font-semibold mb-1 block">Tanggal</label><input type="date" value={fDate} onChange={e => setFDate(e.target.value)} className="input-premium w-full" /></div>
-          </div>
-          <div>
-            <label className="text-xs text-foreground/40 font-semibold mb-1 block">Catatan</label>
-            <div className="relative">
-              <input type="text" value={fNotes} onChange={e => setFNotes(e.target.value)} placeholder="Opsional..." className="input-premium w-full pr-10" />
-              <button type="button" onClick={toggleVoice} className={`absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full transition-all ${isListening?"bg-red-500 text-white animate-pulse":"bg-primary/10 text-primary hover:bg-primary/20"}`}>
-                {isListening ? <MicOff size={14}/> : <Mic size={14}/>}
-              </button>
-            </div>
-          </div>
-            <button type="submit" disabled={saving} className="btn-primary w-full py-3 text-sm disabled:opacity-50 disabled:cursor-not-allowed">
-              {saving ? (
-                <span className="flex items-center justify-center gap-2">
-                  <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  Menyimpan...
-                </span>
-              ) : editingTx ? "Perbarui Transaksi" : "Simpan Transaksi"}
-            </button>
-          </form>
-        </TiltCard>
+        </>
       )}
 
       {filtered.length === 0 ? (
@@ -298,7 +445,7 @@ export default function TransactionsPage() {
                 {items.map((tx) => (
                   <div key={tx.id} className="tx-row glass-card flex items-center justify-between rounded-xl p-3.5 group">
                     <div className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer" onClick={() => openEdit(tx)}>
-                      <div className={`p-2 rounded-xl shrink-0 ${tx.type==="income"?"bg-emerald-500/10 text-emerald-500":"bg-red-500/10 text-red-500"}`}>
+                      <div className={`p-2 rounded-xl shrink-0 ${tx.type==="income"?"bg-sky-400/10 text-sky-400":"bg-rose-400/10 text-rose-400"}`}>
                         {tx.type==="income" ? <ArrowUpRight size={16} strokeWidth={2.5}/> : <ArrowDownRight size={16} strokeWidth={2.5}/>}
                       </div>
                       <div className="min-w-0">
@@ -307,9 +454,9 @@ export default function TransactionsPage() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <p className={`font-bold text-sm whitespace-nowrap ${tx.type==="income"?"text-emerald-600":"text-red-500"}`}>{tx.type==="income"?"+":"-"}{fmtRp(tx.amount)}</p>
+                      <p className={`font-bold text-sm whitespace-nowrap ${tx.type==="income"?"text-sky-500":"text-rose-400"}`}>{tx.type==="income"?"+":"-"}{fmtRp(tx.amount)}</p>
                       <button onClick={() => openEdit(tx)} aria-label="Edit transaksi" className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 p-1.5 text-foreground/20 hover:text-blue-500 rounded-lg hover:bg-blue-500/10 transition-all"><Pencil size={14}/></button>
-                      <button onClick={() => del(tx.id)} aria-label="Hapus transaksi" className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 p-1.5 text-foreground/20 hover:text-red-500 rounded-lg hover:bg-red-500/10 transition-all"><Trash2 size={14}/></button>
+                      <button onClick={() => del(tx.id)} aria-label="Hapus transaksi" className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 p-1.5 text-foreground/20 hover:text-rose-400 rounded-lg hover:bg-rose-400/10 transition-all"><Trash2 size={14}/></button>
                     </div>
                   </div>
                 ))}

@@ -48,7 +48,7 @@ const STEPS: Step[] = [
     emoji: "📸",
     title: "Scan Struk Otomatis",
     desc: "Foto struk belanja dan AI akan membaca otomatis. Tidak perlu input manual lagi!",
-    color: "#10b981",
+    color: "#38bdf8",
   },
   {
     id: "intro2",
@@ -57,7 +57,7 @@ const STEPS: Step[] = [
     emoji: "📊",
     title: "Laporan Visual",
     desc: "Lihat grafik pemasukan & pengeluaran. Pahami kondisi bisnis dalam sekejap.",
-    color: "#6366f1",
+    color: "#818cf8",
   },
   {
     id: "intro3",
@@ -66,7 +66,7 @@ const STEPS: Step[] = [
     emoji: "🤖",
     title: "AI Penasihat Bisnis",
     desc: "Tanya apa saja soal keuangan. AI kami siap bantu 24/7 dengan saran yang relevan.",
-    color: "#f59e0b",
+    color: "#4a8fb4",
   },
   // Profile Steps
   {
@@ -77,7 +77,7 @@ const STEPS: Step[] = [
     emoji: "👋",
     title: "Halo! Boleh tahu namamu?",
     desc: "Supaya saya bisa menyapa dengan lebih personal.",
-    color: "#10b981",
+    color: "#38bdf8",
     placeholder: "Cth: Budi",
   },
   {
@@ -88,7 +88,7 @@ const STEPS: Step[] = [
     emoji: "🏪",
     title: "Apa nama usahamu?",
     desc: "Identitas dari bisnis hebat yang sedang kamu bangun.",
-    color: "#3b82f6",
+    color: "#38bdf8",
     placeholder: "Cth: Warung Makmur",
   },
   {
@@ -98,7 +98,7 @@ const STEPS: Step[] = [
     emoji: "💼",
     title: "Bergerak di bidang apa?",
     desc: "Pilih kategori yang paling sesuai.",
-    color: "#8b5cf6",
+    color: "#818cf8",
     options: ["F&B (Makanan/Minuman)", "Jasa", "Retail / Toko", "Freelance", "Lainnya"],
   },
   {
@@ -108,7 +108,7 @@ const STEPS: Step[] = [
     emoji: "⏳",
     title: "Sudah berapa lama berdiri?",
     desc: "Membantu AI menyusun strategi yang tepat.",
-    color: "#ec4899",
+    color: "#fb7185",
     options: ["< 6 Bulan", "6-12 Bulan", "1-3 Tahun", "> 3 Tahun"],
   },
   {
@@ -119,7 +119,7 @@ const STEPS: Step[] = [
     emoji: "🎯",
     title: "Berapa target omset bulanan?",
     desc: "AI akan memonitor dan membantu mencapainya.",
-    color: "#f59e0b",
+    color: "#4a8fb4",
     placeholder: "Cth: 10000000",
   },
 ];
@@ -231,9 +231,21 @@ export default function OnboardingPage() {
   const isInputValid = cur.type === "intro" || inputValue.toString().trim().length > 0;
 
   return (
-    <div ref={containerRef} className="min-h-[100dvh] flex flex-col items-center justify-center p-6 relative overflow-hidden" style={{ background: "var(--gradient-bg)" }}>
+    <div ref={containerRef} className="min-h-[100dvh] flex flex-col items-center justify-center p-6 relative overflow-hidden app-container">
       <GradientOrbs />
       
+      {/* Sleek App Branding */}
+      <div className="flex items-center gap-2 mb-6 z-10 animate-fade-in">
+        <img
+          src="/logo.png"
+          alt="NotaKu Logo"
+          className="w-9 h-9 object-contain rounded-xl shadow-md border border-foreground/[0.08] bg-white/5 backdrop-blur-sm"
+        />
+        <span className="text-xl font-black tracking-[-0.03em]">
+          Nota<span className="gradient-text">Ku</span>
+        </span>
+      </div>
+
       {/* Progress dots */}
       <div className="flex gap-2 mb-10 z-10 w-full max-w-xs justify-center">
         {STEPS.map((s, i) => (

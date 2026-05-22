@@ -3,7 +3,7 @@ import { scanReceipt } from "@/lib/gemini";
 import { checkRateLimit } from "@/lib/rateLimit";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
-const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"];
+const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif", "application/pdf"];
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,6 +18,8 @@ export async function POST(request: NextRequest) {
     }
     const formData = await request.formData();
     const file = formData.get("receipt") as File;
+    const businessName = (formData.get("businessName") as string) || undefined;
+    const scanMode = (formData.get("scanMode") as string) || "auto";
 
     if (!file) {
       return NextResponse.json(
@@ -29,7 +31,7 @@ export async function POST(request: NextRequest) {
     // Validate file type
     if (!ALLOWED_TYPES.includes(file.type)) {
       return NextResponse.json(
-        { error: `Format file tidak didukung (${file.type}). Gunakan JPG, PNG, atau WebP.` },
+        { error: `Format file tidak didukung (${file.type}). Gunakan JPG, PNG, WebP, atau PDF.` },
         { status: 400 }
       );
     }
@@ -47,7 +49,7 @@ export async function POST(request: NextRequest) {
     const buffer = Buffer.from(bytes);
     const base64 = buffer.toString("base64");
 
-    const result = await scanReceipt(base64, file.type);
+    const result = await scanReceipt(base64, file.type, businessName, scanMode);
 
     // Safely parse JSON response from Gemini
     let parsed;

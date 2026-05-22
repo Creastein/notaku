@@ -13,12 +13,38 @@ import {
   where,
 } from "firebase/firestore";
 import { db, isFirebaseConfigured } from "./firebase";
+import { safeUUID } from "./utils";
 
 const COLLECTION_NAME = "transactions";
 
 function normalizeTransaction(tx: any): Transaction {
-  if (!tx) return tx;
+  if (!tx || typeof tx !== "object") {
+    return {
+      id: safeUUID(),
+      userId: "anonymous",
+      type: "expense",
+      amount: 0,
+      category: "Lainnya",
+      date: new Date().toISOString(),
+      notes: "",
+      merchantName: "",
+      createdAt: new Date().toISOString(),
+    };
+  }
+
+  const id = typeof tx.id === "string" ? tx.id : safeUUID();
+  const userId = typeof tx.userId === "string" ? tx.userId : "anonymous";
+  const type = tx.type === "income" || tx.type === "expense" ? tx.type : "expense";
   
+  let amount = Number(tx.amount);
+  if (isNaN(amount) || amount < 0) {
+    amount = 0;
+  }
+
+  const category = typeof tx.category === "string" ? tx.category.trim() : "Lainnya";
+  const merchantName = typeof tx.merchantName === "string" ? tx.merchantName.trim() : "";
+  const notes = typeof tx.notes === "string" ? tx.notes.trim() : "";
+
   let dateStr = tx.date;
   if (tx.date !== null && tx.date !== undefined) {
     if (typeof tx.date === "object") {
@@ -98,6 +124,13 @@ function normalizeTransaction(tx: any): Transaction {
 
   return {
     ...tx,
+    id,
+    userId,
+    type,
+    amount,
+    category,
+    merchantName,
+    notes,
     date: dateStr,
     createdAt: createdAtStr,
   };
@@ -110,7 +143,7 @@ export async function addTransaction(tx: Omit<Transaction, "id">): Promise<strin
   const userId = profile?.userId || "anonymous";
 
   // Always write to local storage first (write-through cache)
-  const localId = crypto.randomUUID();
+  const localId = safeUUID();
   const newTx = { ...tx, id: localId, userId };
   addTransactionLocal(newTx, localId);
 
@@ -301,7 +334,7 @@ function getTransactionsLocal(): Transaction[] {
 
 function addTransactionLocal(tx: Omit<Transaction, "id">, customId?: string): string {
   const transactions = getTransactionsLocal();
-  const id = customId || crypto.randomUUID();
+  const id = customId || safeUUID();
   const newTx = normalizeTransaction({ ...tx, id });
   const exists = transactions.some((t) => t.id === id);
   if (!exists) {
@@ -329,7 +362,7 @@ function updateTransactionLocal(id: string, updates: Record<string, unknown>): v
 
 export function seedDemoData(): Transaction[] {
   const profile = getUserProfile();
-  const userId = profile?.userId || crypto.randomUUID();
+  const userId = profile?.userId || safeUUID();
 
   const expenseCategories = ["Makanan", "Transport", "Belanja Modal", "Operasional"];
   const incomeCategories = ["Penjualan", "Jasa", "Freelance"];
@@ -359,7 +392,7 @@ export function seedDemoData(): Transaction[] {
       : expenseMerchants[Math.floor(Math.random() * expenseMerchants.length)];
 
     transactions.push({
-      id: crypto.randomUUID(),
+      id: safeUUID(),
       userId,
       type: isIncome ? "income" : "expense",
       amount: isIncome
@@ -402,12 +435,35 @@ export function getUserProfile(): UserProfile | null {
   const raw = localStorage.getItem(PROFILE_KEY);
   if (!raw) return null;
   try {
-    const profile = JSON.parse(raw) as UserProfile;
-    if (!profile.userId) {
-      profile.userId = crypto.randomUUID();
-      localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
+    const profile = JSON.parse(raw);
+    if (!profile || typeof profile !== "object") return null;
+
+    // Ensure vital profile fields exist & clean them
+    const userId = typeof profile.userId === "string" ? profile.userId : safeUUID();
+    const ownerName = typeof profile.ownerName === "string" ? profile.ownerName.trim() : "Teman NotaKu";
+    const businessName = typeof profile.businessName === "string" ? profile.businessName.trim() : "";
+    const businessCategory = typeof profile.businessCategory === "string" ? profile.businessCategory.trim() : "Lainnya";
+    const businessAge = typeof profile.businessAge === "string" ? profile.businessAge.trim() : "";
+    const targetMonthlyRevenue = typeof profile.targetMonthlyRevenue === "number" && !isNaN(profile.targetMonthlyRevenue) && profile.targetMonthlyRevenue > 0
+      ? profile.targetMonthlyRevenue
+      : 0;
+    const onboardedAt = typeof profile.onboardedAt === "string" ? profile.onboardedAt : new Date().toISOString();
+
+    const validatedProfile: UserProfile = {
+      userId,
+      ownerName,
+      businessName,
+      businessCategory,
+      businessAge,
+      targetMonthlyRevenue,
+      onboardedAt
+    };
+
+    // If we filled in missing keys or changed anything, update the cache
+    if (!profile.userId || profile.ownerName !== ownerName || profile.businessName !== businessName) {
+      localStorage.setItem(PROFILE_KEY, JSON.stringify(validatedProfile));
     }
-    return profile;
+    return validatedProfile;
   } catch {
     return null;
   }
@@ -417,8 +473,17 @@ export function saveUserProfile(profile: UserProfile): void {
   if (typeof window === "undefined") return;
   const updatedProfile = { ...profile };
   if (!updatedProfile.userId) {
-    updatedProfile.userId = crypto.randomUUID();
+    updatedProfile.userId = safeUUID();
   }
+  // Sanitize fields before saving
+  if (typeof updatedProfile.ownerName === "string") updatedProfile.ownerName = updatedProfile.ownerName.trim();
+  if (typeof updatedProfile.businessName === "string") updatedProfile.businessName = updatedProfile.businessName.trim();
+  if (typeof updatedProfile.businessCategory === "string") updatedProfile.businessCategory = updatedProfile.businessCategory.trim();
+  if (typeof updatedProfile.businessAge === "string") updatedProfile.businessAge = updatedProfile.businessAge.trim();
+  if (typeof updatedProfile.targetMonthlyRevenue !== "number" || isNaN(updatedProfile.targetMonthlyRevenue) || updatedProfile.targetMonthlyRevenue < 0) {
+    updatedProfile.targetMonthlyRevenue = 0;
+  }
+
   localStorage.setItem(PROFILE_KEY, JSON.stringify(updatedProfile));
 }
 

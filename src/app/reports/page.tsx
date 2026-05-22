@@ -7,6 +7,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { format, subDays, startOfDay } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 import { FileDown, TrendingUp, TrendingDown, Lightbulb, Settings, Sparkles, Bot, AlertTriangle, ShieldAlert, Award, Check, Loader2 } from "lucide-react";
+import { useToast } from "@/components/Toast";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import jsPDF from "jspdf";
@@ -27,7 +28,7 @@ function formatYAxis(value: number) {
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     return (
-      <div className="glass-card rounded-2xl p-3 border border-emerald-500/10 shadow-xl backdrop-blur-md text-xs font-semibold space-y-1 bg-slate-950/90 text-slate-100">
+      <div className="glass-card rounded-2xl p-3 border border-sky-400/10 shadow-xl backdrop-blur-md text-xs font-semibold space-y-1 bg-slate-950/90 text-slate-100">
         <p className="text-[10px] font-black text-slate-400 mb-1.5 uppercase tracking-wider">{label}</p>
         {payload.map((pld: any, index: number) => {
           const color = pld.color || pld.fill || "var(--primary)";
@@ -47,7 +48,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   return null;
 };
 
-const COLORS = ["#10b981", "#f59e0b", "#6366f1", "#ef4444", "#ec4899", "#8b5cf6", "#14b8a6", "#f97316"];
+const COLORS = ["#2dd4bf", "#3b7597", "#94a3b8", "#c4b5fd", "#093c5d", "#0ea5e9", "#64748b", "#38bdf8"];
 
 export default function ReportsPage() {
   const router = useRouter();
@@ -56,6 +57,7 @@ export default function ReportsPage() {
   const [period, setPeriod] = useState<7|30|90>(7);
   const [mounted, setMounted] = useState(false);
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const { showToast } = useToast();
 
   useEffect(() => {
     setMounted(true);
@@ -175,6 +177,7 @@ export default function ReportsPage() {
   const topCatPct = totOut > 0 && topCat ? Math.round((topCat.value / totOut) * 100) : 0;
 
   async function exportPDF() {
+   try {
     const doc = new jsPDF({
       orientation: "portrait",
       unit: "mm",
@@ -182,14 +185,14 @@ export default function ReportsPage() {
     });
 
     // 1. Premium Header (Kop Surat)
-    // Dark Emerald Accent line at the very top
-    doc.setFillColor(5, 150, 105);
+    // Dark Navy Accent line at the very top
+    doc.setFillColor(9, 60, 93);
     doc.rect(0, 0, 210, 8, "F");
 
     // Title / Brand
     doc.setFont("helvetica", "bold");
     doc.setFontSize(24);
-    doc.setTextColor(5, 150, 105);
+    doc.setTextColor(9, 60, 93);
     doc.text("NotaKu", 20, 24);
 
     doc.setFont("helvetica", "normal");
@@ -231,8 +234,8 @@ export default function ReportsPage() {
     // 3. Financial KPI Summary Cards
     // 3 columns at y = 59, height = 20mm. Each width = 52mm, gap = 7mm
     // Card 1: Pemasukan
-    doc.setFillColor(240, 253, 250); // Soft green bg
-    doc.setDrawColor(186, 230, 224); // border
+    doc.setFillColor(240, 249, 255); // Soft sky bg
+    doc.setDrawColor(186, 230, 253); // border
     doc.roundedRect(20, 59, 52, 20, 3, 3, "FD");
     doc.setFont("helvetica", "bold");
     doc.setFontSize(7);
@@ -240,12 +243,12 @@ export default function ReportsPage() {
     doc.text("TOTAL PEMASUKAN", 24, 65);
     doc.setFont("helvetica", "bold");
     doc.setFontSize(10.5);
-    doc.setTextColor(5, 150, 105);
+    doc.setTextColor(56, 189, 248); // sky-400
     doc.text(fmtRp(totIn), 24, 73);
 
     // Card 2: Pengeluaran
-    doc.setFillColor(254, 242, 242); // Soft red bg
-    doc.setDrawColor(254, 202, 202); // border
+    doc.setFillColor(255, 241, 242); // Soft rose bg
+    doc.setDrawColor(254, 205, 211); // border
     doc.roundedRect(79, 59, 52, 20, 3, 3, "FD");
     doc.setFont("helvetica", "bold");
     doc.setFontSize(7);
@@ -253,17 +256,17 @@ export default function ReportsPage() {
     doc.text("TOTAL PENGELUARAN", 83, 65);
     doc.setFont("helvetica", "bold");
     doc.setFontSize(10.5);
-    doc.setTextColor(239, 68, 68);
+    doc.setTextColor(251, 113, 133); // rose-400
     doc.text(fmtRp(totOut), 83, 73);
 
     // Card 3: Profit Bersih
     const isProfit = totIn - totOut >= 0;
     if (isProfit) {
-      doc.setFillColor(240, 249, 255); // Soft blue bg
-      doc.setDrawColor(191, 219, 254); // border
+      doc.setFillColor(240, 249, 255); // Soft sky bg
+      doc.setDrawColor(186, 230, 253); // border
     } else {
-      doc.setFillColor(255, 251, 235); // Soft amber bg
-      doc.setDrawColor(253, 230, 138); // border
+      doc.setFillColor(255, 241, 242); // Soft rose bg
+      doc.setDrawColor(254, 205, 211); // border
     }
     doc.roundedRect(138, 59, 52, 20, 3, 3, "FD");
     doc.setFont("helvetica", "bold");
@@ -273,9 +276,9 @@ export default function ReportsPage() {
     doc.setFont("helvetica", "bold");
     doc.setFontSize(10.5);
     if (isProfit) {
-      doc.setTextColor(37, 99, 235);
+      doc.setTextColor(56, 189, 248); // sky-400
     } else {
-      doc.setTextColor(217, 119, 6);
+      doc.setTextColor(251, 113, 133); // rose-400
     }
     doc.text(fmtRp(totIn - totOut), 142, 73);
 
@@ -349,9 +352,9 @@ export default function ReportsPage() {
 
       doc.setFont("helvetica", "bold");
       doc.setFontSize(11);
-      doc.setTextColor(5, 150, 105); // emerald color for AI!
+      doc.setTextColor(9, 60, 93); // Navy color for AI!
       doc.text("Analisis & Peringatan AI CFO", 20, y);
-      doc.setDrawColor(209, 250, 229);
+      doc.setDrawColor(186, 220, 235);
       doc.line(20, y + 3, 190, y + 3);
       y += 8;
 
@@ -436,9 +439,9 @@ export default function ReportsPage() {
             y = 20;
             doc.setFont("helvetica", "bold");
             doc.setFontSize(11);
-            doc.setTextColor(5, 150, 105);
+            doc.setTextColor(9, 60, 93);
             doc.text("Rekomendasi Tindakan (Lanjutan)", 20, y);
-            doc.setDrawColor(209, 250, 229);
+            doc.setDrawColor(186, 220, 235);
             doc.line(20, y + 3, 190, y + 3);
             y += 8;
             
@@ -503,7 +506,7 @@ export default function ReportsPage() {
         lineWidth: 0.1,
       },
       headStyles: {
-        fillColor: [5, 150, 105],
+        fillColor: [9, 60, 93],
         textColor: [255, 255, 255],
         fontStyle: "bold",
         fontSize: 8.5
@@ -542,6 +545,11 @@ export default function ReportsPage() {
       ? profile.businessName.replace(/\s+/g, "_")
       : "UMKM";
     doc.save(`Laporan_Finansial_NotaKu_${fileSuffix}.pdf`);
+    showToast({ type: "success", title: "PDF berhasil diunduh! 📄", message: `Laporan_Finansial_NotaKu_${fileSuffix}.pdf telah tersimpan.` });
+   } catch (err) {
+    console.error("PDF export error:", err);
+    showToast({ type: "error", title: "Gagal membuat PDF", message: "Terjadi kesalahan saat mengekspor laporan." });
+   }
   }
 
   if (loading) return (
@@ -568,7 +576,7 @@ export default function ReportsPage() {
           >
             <Settings size={14} />
           </Link>
-          <button onClick={exportPDF} className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-semibold transition-all hover:scale-105" style={{ background: "var(--gradient-primary)", color: "white", boxShadow: "0 2px 12px rgba(5,150,105,0.3)" }}>
+          <button onClick={exportPDF} className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-semibold transition-all hover:scale-105" style={{ background: "var(--gradient-primary)", color: "white", boxShadow: "0 2px 12px rgba(9, 60, 93, 0.3)" }}>
             <FileDown size={16}/>PDF
           </button>
         </div>
@@ -606,13 +614,13 @@ export default function ReportsPage() {
             <TiltCard>
               <div className="glass-card rounded-2xl p-4 h-full relative overflow-hidden group">
                 <div className="flex items-center gap-2 mb-1">
-                  <div className="p-1 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                  <div className="p-1 rounded-lg bg-sky-400/10 text-sky-500 dark:text-sky-300">
                     <TrendingUp size={14} />
                   </div>
                   <span className="text-[11px] text-foreground/45 font-bold uppercase tracking-wider">Pemasukan</span>
                 </div>
-                <p className="text-lg font-black text-emerald-600 mt-1">{fmtRp(totIn)}</p>
-                <div className="absolute -right-3 -bottom-3 text-emerald-500/5 group-hover:scale-110 transition-transform duration-300">
+                <p className="text-lg font-black text-sky-500 mt-1">{fmtRp(totIn)}</p>
+                <div className="absolute -right-3 -bottom-3 text-sky-400/5 group-hover:scale-110 transition-transform duration-300">
                   <TrendingUp size={64} />
                 </div>
               </div>
@@ -620,13 +628,13 @@ export default function ReportsPage() {
             <TiltCard>
               <div className="glass-card rounded-2xl p-4 h-full relative overflow-hidden group">
                 <div className="flex items-center gap-2 mb-1">
-                  <div className="p-1 rounded-lg bg-red-500/10 text-red-600 dark:text-red-400">
+                  <div className="p-1 rounded-lg bg-rose-400/10 text-rose-500 dark:text-rose-300">
                     <TrendingDown size={14} />
                   </div>
                   <span className="text-[11px] text-foreground/45 font-bold uppercase tracking-wider">Pengeluaran</span>
                 </div>
-                <p className="text-lg font-black text-red-500 mt-1">{fmtRp(totOut)}</p>
-                <div className="absolute -right-3 -bottom-3 text-red-500/5 group-hover:scale-110 transition-transform duration-300">
+                <p className="text-lg font-black text-rose-400 mt-1">{fmtRp(totOut)}</p>
+                <div className="absolute -right-3 -bottom-3 text-rose-400/5 group-hover:scale-110 transition-transform duration-300">
                   <TrendingDown size={64} />
                 </div>
               </div>
@@ -637,7 +645,7 @@ export default function ReportsPage() {
           {aiLoading ? (
             <div className="glass-card rounded-2xl p-4 animate-fade-in-up delay-3 space-y-3 relative overflow-hidden">
               <div className="flex items-center gap-3">
-                <div className="bg-emerald-500/10 p-2 rounded-xl text-emerald-500 shadow-sm shrink-0">
+                <div className="bg-sky-400/10 p-2 rounded-xl text-sky-400 shadow-sm shrink-0">
                   <Sparkles className="animate-pulse" size={16} />
                 </div>
                 <div className="h-4 w-32 bg-foreground/10 rounded animate-pulse" />
@@ -645,18 +653,18 @@ export default function ReportsPage() {
               <div className="h-3 w-5/6 bg-foreground/5 rounded animate-pulse" />
             </div>
           ) : aiDigest ? (
-            <div className="relative rounded-2xl p-[1.5px] overflow-hidden animate-fade-in-up delay-3 shadow-lg shadow-emerald-500/5">
+            <div className="relative rounded-2xl p-[1.5px] overflow-hidden animate-fade-in-up delay-3 shadow-lg shadow-sky-400/5">
               {/* Dynamic premium glowing border */}
-              <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/15 via-teal-500/15 to-indigo-500/15 blur-[2px]" />
-              <div className="relative bg-card/90 backdrop-blur-xl rounded-2xl p-4 flex flex-col gap-3">
+              <div className="absolute inset-0 bg-gradient-to-r from-[#38bdf8]/15 via-cyan-500/15 to-[#3b7597]/15 blur-[2px]" />
+              <div className="relative bg-white/35 dark:bg-slate-950/40 backdrop-blur-2xl rounded-2xl p-4 flex flex-col gap-3">
                 {/* Header */}
                 <div className="flex items-center gap-3">
-                  <div className="bg-gradient-to-br from-emerald-500 to-teal-600 p-2 rounded-xl text-white shadow-sm shadow-emerald-500/10 shrink-0">
+                  <div className="bg-gradient-to-br from-sky-400 to-cyan-600 p-2 rounded-xl text-white shadow-sm shadow-sky-400/10 shrink-0">
                     <Sparkles size={16} />
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
-                    <p className="text-[11px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">AI CFO Penasihat</p>
-                    <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600">
+                    <p className="text-[11px] font-black text-sky-500 dark:text-sky-300 uppercase tracking-widest">AI CFO Penasihat</p>
+                    <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-sky-400/10 text-sky-500">
                       Skor Sehat: {aiDigest.healthScore}/100
                     </span>
                   </div>
@@ -687,7 +695,7 @@ export default function ReportsPage() {
                   style={{
                     background: "var(--gradient-primary)",
                     color: "white",
-                    boxShadow: "0 4px 12px rgba(5,150,105,0.2)"
+                    boxShadow: "0 4px 12px rgba(9, 60, 93, 0.2)"
                   }}
                 >
                   Diskusikan Rekomendasi di AI Chat ➔
@@ -706,8 +714,8 @@ export default function ReportsPage() {
                   <XAxis dataKey="name" tick={{ fontSize: 10, fontWeight: 600, fill: "var(--foreground)", opacity: 0.5 }} tickLine={false} axisLine={false} />
                   <YAxis tick={{ fontSize: 10, fontWeight: 600, fill: "var(--foreground)", opacity: 0.5 }} tickFormatter={formatYAxis} tickLine={false} axisLine={false} />
                   <Tooltip content={<CustomTooltip />} />
-                  <Bar dataKey="pemasukan" name="Pemasukan" fill="#10b981" radius={[6, 6, 0, 0]} isAnimationActive={false} />
-                  <Bar dataKey="pengeluaran" name="Pengeluaran" fill="#ef4444" radius={[6, 6, 0, 0]} isAnimationActive={false} />
+                  <Bar dataKey="pemasukan" name="Pemasukan" fill="#2dd4bf" radius={[6, 6, 0, 0]} isAnimationActive={false} />
+                  <Bar dataKey="pengeluaran" name="Pengeluaran" fill="#fb7185" radius={[6, 6, 0, 0]} isAnimationActive={false} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -736,7 +744,7 @@ export default function ReportsPage() {
                   </ResponsiveContainer>
                   <div className="absolute flex flex-col items-center justify-center text-center pointer-events-none">
                     <span className="text-[10px] uppercase tracking-wider text-foreground/45 font-bold">Total Keluar</span>
-                    <span className="text-base font-black text-red-500 mt-0.5">{fmtRp(totOut)}</span>
+                    <span className="text-base font-black text-rose-400 mt-0.5">{fmtRp(totOut)}</span>
                   </div>
                 </div>
 
@@ -774,15 +782,15 @@ export default function ReportsPage() {
                   <AreaChart data={trend}>
                     <defs>
                       <linearGradient id="profitGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
-                        <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                        <stop offset="5%" stopColor="#2dd4bf" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="#2dd4bf" stopOpacity={0} />
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
                     <XAxis dataKey="date" tick={{ fontSize: 10, fontWeight: 600, fill: "var(--foreground)", opacity: 0.5 }} tickLine={false} axisLine={false} />
                     <YAxis tick={{ fontSize: 10, fontWeight: 600, fill: "var(--foreground)", opacity: 0.5 }} tickFormatter={formatYAxis} tickLine={false} axisLine={false} />
                     <Tooltip content={<CustomTooltip />} />
-                    <Area type="monotone" name="Tren Profit" dataKey="profit" stroke="#10b981" strokeWidth={2.5} fill="url(#profitGrad)" dot={{ r: 3.5, fill: "#10b981", strokeWidth: 1, stroke: "#fff" }} isAnimationActive={false} />
+                    <Area type="monotone" name="Tren Profit" dataKey="profit" stroke="#2dd4bf" strokeWidth={2.5} fill="url(#profitGrad)" dot={{ r: 3.5, fill: "#2dd4bf", strokeWidth: 1, stroke: "#fff" }} isAnimationActive={false} />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>

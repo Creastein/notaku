@@ -26,6 +26,7 @@ export interface GeminiReceiptResult {
     quantity: number;
     price: number;
   }>;
+  type?: TransactionType;
 }
 
 // Helper types for AI Advisor

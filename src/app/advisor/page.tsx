@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { TiltCard } from "@/components/effects/TiltCard";
 import { GradientOrbs } from "@/components/effects/GradientOrbs";
 import { triggerHaptic } from "@/lib/haptics";
+import { safeUUID } from "@/lib/utils";
 
 interface Message { id: string; role: "user" | "model"; content: string; }
 
@@ -31,7 +32,7 @@ function renderMessageContent(content: string) {
     const contentEl = parts.length > 0 ? parts : cleanLine;
     if (isBullet) return (
       <div key={idx} className="flex items-start gap-2 ml-1 my-1">
-        <span className="text-emerald-500 font-bold">•</span>
+        <span className="text-sky-400 font-bold">•</span>
         <span className="flex-1">{contentEl}</span>
       </div>
     );
@@ -53,7 +54,7 @@ export default function AdvisorPage() {
     if (!text.trim() || loading) return;
     triggerHaptic(10);
 
-    const userMsg: Message = { id: crypto.randomUUID(), role: "user", content: text.trim() };
+    const userMsg: Message = { id: safeUUID(), role: "user", content: text.trim() };
     setMessages(prev => [...prev, userMsg]);
     setInput("");
     setActiveFollowUps([]); // clear suggestions
@@ -80,12 +81,12 @@ export default function AdvisorPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
 
-      setMessages(prev => [...prev, { id: crypto.randomUUID(), role: "model", content: data.response }]);
+      setMessages(prev => [...prev, { id: safeUUID(), role: "model", content: data.response }]);
       if (data.followUps && data.followUps.length > 0) {
         setActiveFollowUps(data.followUps);
       }
     } catch {
-      setMessages(prev => [...prev, { id: crypto.randomUUID(), role: "model", content: "⚠️ Maaf, terjadi kesalahan. Coba lagi nanti." }]);
+      setMessages(prev => [...prev, { id: safeUUID(), role: "model", content: "⚠️ Maaf, terjadi kesalahan. Coba lagi nanti." }]);
     } finally { setLoading(false); }
   }
 
@@ -141,9 +142,9 @@ export default function AdvisorPage() {
       {/* Header */}
       <div className="p-5 pt-5 flex items-center justify-between animate-fade-in-up relative z-10" style={{ borderBottom: "1px solid var(--border)" }}>
         <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-2xl relative" style={{ background: "var(--gradient-primary)", boxShadow: "0 4px 16px rgba(5,150,105,0.3)" }}>
+          <div className="p-2.5 rounded-2xl relative" style={{ background: "var(--gradient-primary)", boxShadow: "0 4px 16px rgba(9, 60, 93, 0.3)" }}>
             <Bot size={20} className="text-white" />
-            <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-400 rounded-full border-2 border-white animate-pulse" />
+            <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-[#2dd4bf] rounded-full border-2 border-white animate-pulse" />
           </div>
           <div>
             <h1 className="font-extrabold text-base tracking-tight">AI Advisor</h1>
@@ -169,7 +170,7 @@ export default function AdvisorPage() {
           <div className="space-y-4 animate-fade-in-up">
             <TiltCard>
               <div className="text-center py-8">
-                <div className="inline-flex p-4 rounded-3xl mb-4" style={{ background: "var(--gradient-primary)", boxShadow: "0 8px 24px rgba(5,150,105,0.3)" }}>
+                <div className="inline-flex p-4 rounded-3xl mb-4" style={{ background: "var(--gradient-primary)", boxShadow: "0 8px 24px rgba(9, 60, 93, 0.3)" }}>
                   <Sparkles size={32} className="text-white" />
                 </div>
                 <p className="font-extrabold text-lg">Halo! Saya NotaKu AI</p>
@@ -199,7 +200,7 @@ export default function AdvisorPage() {
                   ? "rounded-br-md text-white font-medium"
                   : "glass-card rounded-bl-md text-foreground/80"
               }`}
-                style={msg.role === "user" ? { background: "var(--gradient-primary)", boxShadow: "0 2px 12px rgba(5,150,105,0.3)" } : undefined}
+                style={msg.role === "user" ? { background: "var(--gradient-primary)", boxShadow: "0 2px 12px rgba(9, 60, 93, 0.3)" } : undefined}
               >
                 {msg.role === "model" ? renderMessageContent(msg.content) : msg.content}
               </div>
@@ -234,7 +235,7 @@ export default function AdvisorPage() {
                   onClick={() => {
                     sendMessageText(s);
                   }}
-                  className="bg-emerald-500/10 hover:bg-emerald-500/15 border border-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs px-3.5 py-1.5 rounded-full shrink-0 font-bold transition-all shadow-sm duration-150 animate-fade-in-up"
+                  className="bg-sky-400/10 hover:bg-sky-400/15 border border-sky-400/10 text-sky-600 dark:text-sky-300 text-xs px-3.5 py-1.5 rounded-full shrink-0 font-bold transition-all shadow-sm duration-150 animate-fade-in-up"
                 >
                   💡 {s}
                 </button>
@@ -247,7 +248,7 @@ export default function AdvisorPage() {
               className="input-premium flex-1 text-sm !border-0 !shadow-none !bg-transparent" disabled={loading} />
             <button type="submit" disabled={loading || !input.trim()}
               className="p-2.5 rounded-xl transition-all disabled:opacity-30 shrink-0"
-              style={{ background: "var(--gradient-primary)", color: "white", boxShadow: "0 2px 12px rgba(5,150,105,0.3)" }}
+              style={{ background: "var(--gradient-primary)", color: "white", boxShadow: "0 2px 12px rgba(9, 60, 93, 0.3)" }}
             ><Send size={18}/></button>
           </form>
         </div>
