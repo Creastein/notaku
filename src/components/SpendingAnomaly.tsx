@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useEffect } from "react";
 import { Transaction } from "@/types";
-import { AlertTriangle } from "lucide-react";
+import { Warning } from "@phosphor-icons/react";
 import Link from "next/link";
 
 function formatRupiah(amount: number) {
@@ -42,7 +42,7 @@ export function SpendingAnomaly({ transactions }: { transactions: Transaction[] 
       <div className="absolute top-0 right-0 w-24 h-24 bg-slate-400/10 rounded-bl-full" />
       <div className="flex items-start gap-3 relative z-10">
         <div className="bg-slate-400/20 p-2 rounded-xl text-slate-500 shrink-0">
-          <AlertTriangle size={20} className="animate-pulse" />
+          <Warning size={20} className="animate-pulse" />
         </div>
         <div>
           <h4 className="text-sm font-bold text-slate-600 dark:text-slate-400 mb-1">

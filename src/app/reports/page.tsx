@@ -6,7 +6,7 @@ import { getTransactions, getUserProfile, UserProfile } from "@/lib/storage";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Area, AreaChart } from "recharts";
 import { format, subDays, startOfDay } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
-import { FileDown, TrendingUp, TrendingDown, Lightbulb, Settings, Sparkles, Bot, AlertTriangle, ShieldAlert, Award, Check, Loader2 } from "lucide-react";
+import { FileArrowDown, TrendUp, TrendDown, Gear, Sparkle } from "@phosphor-icons/react";
 import { useToast } from "@/components/Toast";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -574,10 +574,10 @@ export default function ReportsPage() {
             href="/settings"
             className="w-8 h-8 flex items-center justify-center rounded-full bg-foreground/[0.05] border border-foreground/[0.07] text-foreground/60 hover:text-foreground hover:bg-foreground/[0.08] transition-colors"
           >
-            <Settings size={14} />
+            <Gear size={14} />
           </Link>
           <button onClick={exportPDF} className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-semibold transition-all hover:scale-105" style={{ background: "var(--gradient-primary)", color: "white", boxShadow: "0 2px 12px rgba(9, 60, 93, 0.3)" }}>
-            <FileDown size={16}/>PDF
+            <FileArrowDown size={16}/>PDF
           </button>
         </div>
       </div>
@@ -615,13 +615,13 @@ export default function ReportsPage() {
               <div className="glass-card rounded-2xl p-4 h-full relative overflow-hidden group">
                 <div className="flex items-center gap-2 mb-1">
                   <div className="p-1 rounded-lg bg-sky-400/10 text-sky-500 dark:text-sky-300">
-                    <TrendingUp size={14} />
+                    <TrendUp size={14} />
                   </div>
                   <span className="text-[11px] text-foreground/45 font-bold uppercase tracking-wider">Pemasukan</span>
                 </div>
                 <p className="text-lg font-black text-sky-500 mt-1">{fmtRp(totIn)}</p>
                 <div className="absolute -right-3 -bottom-3 text-sky-400/5 group-hover:scale-110 transition-transform duration-300">
-                  <TrendingUp size={64} />
+                  <TrendUp size={64} />
                 </div>
               </div>
             </TiltCard>
@@ -629,13 +629,13 @@ export default function ReportsPage() {
               <div className="glass-card rounded-2xl p-4 h-full relative overflow-hidden group">
                 <div className="flex items-center gap-2 mb-1">
                   <div className="p-1 rounded-lg bg-rose-400/10 text-rose-500 dark:text-rose-300">
-                    <TrendingDown size={14} />
+                    <TrendDown size={14} />
                   </div>
                   <span className="text-[11px] text-foreground/45 font-bold uppercase tracking-wider">Pengeluaran</span>
                 </div>
                 <p className="text-lg font-black text-rose-400 mt-1">{fmtRp(totOut)}</p>
                 <div className="absolute -right-3 -bottom-3 text-rose-400/5 group-hover:scale-110 transition-transform duration-300">
-                  <TrendingDown size={64} />
+                  <TrendDown size={64} />
                 </div>
               </div>
             </TiltCard>
@@ -646,7 +646,7 @@ export default function ReportsPage() {
             <div className="glass-card rounded-2xl p-4 animate-fade-in-up delay-3 space-y-3 relative overflow-hidden">
               <div className="flex items-center gap-3">
                 <div className="bg-sky-400/10 p-2 rounded-xl text-sky-400 shadow-sm shrink-0">
-                  <Sparkles className="animate-pulse" size={16} />
+                  <Sparkle className="animate-pulse" size={16} />
                 </div>
                 <div className="h-4 w-32 bg-foreground/10 rounded animate-pulse" />
               </div>
@@ -660,7 +660,7 @@ export default function ReportsPage() {
                 {/* Header */}
                 <div className="flex items-center gap-3">
                   <div className="bg-gradient-to-br from-sky-400 to-cyan-600 p-2 rounded-xl text-white shadow-sm shadow-sky-400/10 shrink-0">
-                    <Sparkles size={16} />
+                    <Sparkle size={16} />
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="text-[11px] font-black text-sky-500 dark:text-sky-300 uppercase tracking-widest">AI CFO Penasihat</p>

@@ -6,17 +6,16 @@ import { getTransactions, seedDemoData, hasDemoData, getUserProfile } from "@/li
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import {
-  TrendingUp,
-  TrendingDown,
+  TrendUp,
+  TrendDown,
   Wallet,
   ArrowUpRight,
   ArrowDownRight,
-  Sparkles,
-  ChevronRight,
-  Zap,
-  ChevronDown,
-  Settings,
-} from "lucide-react";
+  CaretRight,
+  Lightning,
+  CaretDown,
+  Gear,
+} from "@phosphor-icons/react";
 import { format, isSameMonth, startOfMonth, subMonths, isToday, isYesterday } from "date-fns";
 import { id } from "date-fns/locale";
 import { useRouter } from "next/navigation";
@@ -301,6 +300,11 @@ export default function HomePage() {
             { y: 20, opacity: 0, duration: 0.45, stagger: 0.06, clearProps: "all" },
             "-=0.15"
           );
+
+        // Safety: force visibility after 2s in case GSAP gets stuck
+        setTimeout(() => {
+          gsap.set([".hero-card", ".page-header", ".stat-pill-wrap", ".content-card"], { clearProps: "all" });
+        }, 2000);
       } catch (err) {
         console.error("GSAP animation failed:", err);
         // Fallback: pastikan semua elemen terlihat
@@ -359,10 +363,16 @@ export default function HomePage() {
 
   async function loadData() {
     setLoading(true);
-    const data = await getTransactions();
-    setTransactions(data);
-    setShowDemoBtn(!hasDemoData());
-    setLoading(false);
+    try {
+      const data = await getTransactions();
+      setTransactions(data);
+      setShowDemoBtn(!hasDemoData());
+    } catch (err) {
+      console.error("Failed to load transactions:", err);
+      // Ensure we still show the page even if loading fails
+    } finally {
+      setLoading(false);
+    }
   }
 
   function handleSeedDemo() {
@@ -422,7 +432,7 @@ export default function HomePage() {
   /* ── premium shimmer loader ── */
   if (loading) {
     return (
-      <div className="p-5 space-y-4 animate-fade-in">
+      <div className="relative z-10 p-5 space-y-4 animate-fade-in">
         <div className="flex items-center justify-between">
           <div className="space-y-2">
             <div className="h-3 w-24 shimmer-premium rounded-full" />
@@ -445,22 +455,25 @@ export default function HomePage() {
   }
 
   return (
-    <div ref={containerRef} className="p-5 space-y-4 pb-6">
+    <div ref={containerRef} className="relative z-10 p-5 space-y-4 pb-6">
       <GradientOrbs />
 
       {/* ── HEADER ── */}
       <div className="page-header flex items-center justify-between pt-3">
         <div className="flex items-center gap-3">
-          <img
-            src="/logo.png"
-            alt="NotaKu Logo"
-            className="w-16 h-16 object-contain rounded-2xl shadow-md border border-foreground/[0.08] bg-white/5 backdrop-blur-sm"
-          />
+          <div className="w-14 h-14 shrink-0">
+            <img
+              src="/logo.png"
+              alt="NotaKu Logo"
+              className="w-full h-full object-contain"
+            />
+          </div>
           <div>
-            <p className="text-[10px] text-foreground/45 font-semibold tracking-wide uppercase leading-none">
-              {greeting.text} {greeting.emoji}
+            <p className="text-[13px] text-foreground/45 font-bold tracking-wide uppercase leading-none flex items-center gap-1.5">
+              <span>{greeting.text}</span>
+              <span className="text-2xl leading-none translate-y-[-2px]">{greeting.emoji}</span>
             </p>
-            <h1 className="text-2xl font-black tracking-[-0.03em] mt-1.5 leading-none">
+            <h1 className="text-3xl font-black tracking-[-0.03em] mt-2 leading-none">
               Nota<span className="gradient-text">Ku</span>
             </h1>
           </div>
@@ -477,7 +490,7 @@ export default function HomePage() {
                 boxShadow: "0 2px 10px rgba(9,60,93,0.3)",
               }}
             >
-              <Zap size={11} />
+              <Lightning size={11} />
               Demo
             </button>
           )}
@@ -493,7 +506,7 @@ export default function HomePage() {
             href="/settings"
             className="w-8 h-8 flex items-center justify-center rounded-full bg-foreground/[0.05] border border-foreground/[0.07] text-foreground/60 hover:text-foreground hover:bg-foreground/[0.08] transition-colors"
           >
-            <Settings size={14} />
+            <Gear size={14} />
           </Link>
         </div>
       </div>
@@ -555,7 +568,7 @@ export default function HomePage() {
                     className="flex items-center gap-1 bg-white/10 hover:bg-white/20 transition-colors px-2 py-0.5 rounded-md text-[10px] font-semibold backdrop-blur-sm border border-white/10"
                   >
                     {timeFilter === "all" ? "Semua Waktu" : "Bulan Ini"}
-                    <ChevronDown size={10} />
+                    <CaretDown size={10} />
                   </button>
                   
                   {isFilterOpen && (
@@ -593,7 +606,7 @@ export default function HomePage() {
                   profitTrend.isUp ? "bg-white/10 border-white/20 text-white" : "bg-red-500/20 border-red-500/30 text-white"
                 }`}
               >
-                {profitTrend.isUp ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
+                {profitTrend.isUp ? <TrendUp size={10} /> : <TrendDown size={10} />}
                 <span>{profitTrend.value.toFixed(1)}%</span>
               </div>
               <p className="text-[10px] text-white/60 font-medium">
@@ -613,10 +626,10 @@ export default function HomePage() {
       {/* ── STAT PILLS (Income / Expense) ── */}
       <div className="grid grid-cols-2 gap-2.5">
         <div className="stat-pill-wrap">
-          <StatPill label="Pemasukan" value={totalIncome} color="green" icon={TrendingUp} sparklinePoints={incomeSparkline} />
+          <StatPill label="Pemasukan" value={totalIncome} color="green" icon={TrendUp} sparklinePoints={incomeSparkline} />
         </div>
         <div className="stat-pill-wrap">
-          <StatPill label="Pengeluaran" value={totalExpense} color="red" icon={TrendingDown} sparklinePoints={expenseSparkline} />
+          <StatPill label="Pengeluaran" value={totalExpense} color="red" icon={TrendDown} sparklinePoints={expenseSparkline} />
         </div>
       </div>
 
@@ -642,7 +655,7 @@ export default function HomePage() {
             href="/transactions"
             className="flex items-center gap-0.5 text-[11px] font-bold text-primary hover:underline bg-primary/10 px-2 py-1 rounded-md transition-colors"
           >
-            Semua <ChevronRight size={13} />
+            Semua <CaretRight size={13} />
           </Link>
         </div>
 

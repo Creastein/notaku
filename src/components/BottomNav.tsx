@@ -2,16 +2,16 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Receipt, Camera, PieChart, Sparkles } from "lucide-react";
+import { House, Receipt, Camera, ChartPie, Sparkle } from "@phosphor-icons/react";
 import { triggerHaptic } from "@/lib/haptics";
 
 // Navigation items
 const ALL_ITEMS = [
-  { name: "Beranda",   href: "/",            icon: Home     },
+  { name: "Beranda",   href: "/",            icon: House    },
   { name: "Transaksi", href: "/transactions", icon: Receipt  },
   { name: "Scan",      href: "/scan",        icon: Camera   },
-  { name: "Laporan",   href: "/reports",      icon: PieChart },
-  { name: "Advisor",   href: "/advisor",      icon: Sparkles },
+  { name: "Laporan",   href: "/reports",      icon: ChartPie },
+  { name: "Advisor",   href: "/advisor",      icon: Sparkle  },
 ];
 
 // Pages where bottom nav is hidden
@@ -48,7 +48,7 @@ export default function BottomNav() {
                         : "text-foreground/45 hover:text-foreground/75 hover:bg-white/5"
                     }`}
                   >
-                    <Icon size={20} strokeWidth={isActive ? 2.5 : 1.8} />
+                    <Icon size={22} weight={isActive ? "duotone" : "light"} />
                     
                     {/* Small subtle accent dot under scan button to guide user, when not active */}
                     {item.href === "/scan" && !isActive && (

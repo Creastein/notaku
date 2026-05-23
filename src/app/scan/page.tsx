@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Camera, Upload, Loader2, Check, X, Plus, Zap, Settings, FileText, Video, CircleDot } from "lucide-react";
+import { Camera, UploadSimple, CircleNotch, Check, X, Plus, Lightning, Gear, FileText, Video, Target } from "@phosphor-icons/react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { GeminiReceiptResult, TransactionType } from "@/types";
@@ -261,7 +261,7 @@ export default function ScanPage() {
           href="/settings"
           className="p-2.5 rounded-xl glass-card hover:bg-white/10 transition-all text-foreground/60 hover:text-foreground"
         >
-          <Settings size={20} />
+          <Gear size={20} />
         </Link>
       </div>
 
@@ -413,7 +413,7 @@ export default function ScanPage() {
                   }}
                   className="glass-card text-foreground/70 hover:text-foreground inline-flex items-center gap-2 text-sm py-2.5 px-5 rounded-[0.875rem] font-semibold transition-colors cursor-pointer"
                 >
-                  <Upload size={16} /> Pilih File
+                  <UploadSimple size={16} /> Pilih File
                 </button>
                 <input
                   ref={fileInputRef}
@@ -498,7 +498,7 @@ export default function ScanPage() {
               onClick={handleScan}
               className="btn-primary w-full py-3.5 flex items-center justify-center gap-2.5 text-base animate-scale-in"
             >
-              <Zap size={20} />
+              <Lightning size={20} />
               Scan dengan AI
             </button>
           )}
@@ -506,7 +506,7 @@ export default function ScanPage() {
           {/* Scanning State */}
           {scanning && (
             <div className="glass-card rounded-2xl text-center py-8 animate-scale-in">
-              <Loader2
+              <CircleNotch
                 size={36}
                 className="animate-spin mx-auto text-primary mb-3"
               />

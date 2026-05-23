@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, createContext, useContext } from "react";
-import { CheckCircle, XCircle, AlertTriangle, Info, X } from "lucide-react";
+import { CheckCircle, XCircle, Warning, Info, X } from "@phosphor-icons/react";
 import { safeUUID } from "../lib/utils";
 
 type ToastType = "success" | "error" | "warning" | "info";
@@ -86,10 +86,10 @@ function ToastCard({
   };
 
   const iconMap: Record<ToastType, React.ReactNode> = {
-    success: <CheckCircle size={20} />,
-    error: <XCircle size={20} />,
-    warning: <AlertTriangle size={20} />,
-    info: <Info size={20} />,
+    success: <CheckCircle size={20} weight="duotone" />,
+    error: <XCircle size={20} weight="duotone" />,
+    warning: <Warning size={20} weight="duotone" />,
+    info: <Info size={20} weight="duotone" />,
   };
 
   const colorMap: Record<ToastType, string> = {

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, User, Moon, Sun, Laptop, Trash2, Info, Download, Save, RefreshCcw, LogOut, Shield } from "lucide-react";
+import { CaretLeft, User, Moon, Sun, Desktop, Trash, Info, Download, FloppyDisk, ArrowsCounterClockwise, SignOut, Shield } from "@phosphor-icons/react";
 import { useToast } from "@/components/Toast";
 import { useTheme } from "@/components/ThemeProvider";
 import { usePWAInstall } from "@/hooks/usePWAInstall";
@@ -128,7 +128,7 @@ export default function SettingsPage() {
             onClick={() => router.back()}
             className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-foreground/5 transition-colors"
           >
-            <ChevronLeft size={24} className="text-foreground" />
+            <CaretLeft size={24} className="text-foreground" />
           </button>
           <h1 className="text-lg font-semibold text-foreground">Pengaturan</h1>
         </div>
@@ -171,7 +171,7 @@ export default function SettingsPage() {
                 onClick={handleSignOut}
                 className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium bg-foreground/5 text-foreground/60 hover:bg-foreground/10 hover:text-foreground transition-colors"
               >
-                <LogOut size={16} />
+                <SignOut size={16} />
                 Keluar dari Akun
               </button>
             </div>
@@ -265,7 +265,7 @@ export default function SettingsPage() {
               {isSaving ? (
                 <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               ) : (
-                <Save size={16} />
+                <FloppyDisk size={16} />
               )}
               {isSaving ? "Menyimpan..." : "Simpan Profil"}
             </button>
@@ -293,7 +293,7 @@ export default function SettingsPage() {
               >
                 {t === "light" && <Sun size={14} />}
                 {t === "dark" && <Moon size={14} />}
-                {t === "system" && <Laptop size={14} />}
+                {t === "system" && <Desktop size={14} />}
                 {t === "system" ? "Sistem" : t === "light" ? "Terang" : "Gelap"}
               </button>
             ))}
@@ -329,7 +329,7 @@ export default function SettingsPage() {
         <div className="glass-card rounded-2xl p-5 border border-red-500/20 bg-red-500/5 shadow-sm space-y-4">
           <div className="flex items-center gap-3 mb-2">
             <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center text-red-500">
-              <Trash2 size={20} />
+              <Trash size={20} />
             </div>
             <h2 className="font-semibold text-red-600 dark:text-red-400">Zona Bahaya</h2>
           </div>
@@ -341,20 +341,20 @@ export default function SettingsPage() {
                 className="w-full flex items-center justify-between p-3 rounded-xl bg-foreground/5 hover:bg-foreground/10 transition-colors"
               >
                 <div className="flex items-center gap-3 text-sm font-medium text-foreground">
-                  <RefreshCcw size={16} className="text-foreground/60" />
+                  <ArrowsCounterClockwise size={16} className="text-foreground/60" />
                   Ulangi Onboarding
                 </div>
-                <ChevronLeft size={16} className="rotate-180 text-foreground/40" />
+                <CaretLeft size={16} className="rotate-180 text-foreground/40" />
               </button>
               <button
                 onClick={() => setShowDeleteConfirm(true)}
                 className="w-full flex items-center justify-between p-3 rounded-xl bg-red-500/10 hover:bg-red-500/20 transition-colors"
               >
                 <div className="flex items-center gap-3 text-sm font-medium text-red-600 dark:text-red-400">
-                  <Trash2 size={16} />
+                  <Trash size={16} />
                   Hapus Semua Data
                 </div>
-                <ChevronLeft size={16} className="rotate-180 text-red-500/40" />
+                <CaretLeft size={16} className="rotate-180 text-red-500/40" />
               </button>
             </div>
           ) : (

@@ -5,7 +5,7 @@ import { Transaction } from "@/types";
 import { getTransactions, addTransaction, deleteTransaction, updateTransaction } from "@/lib/storage";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
-import { ArrowUpRight, ArrowDownRight, ArrowLeft, Plus, Trash2, X, Mic, MicOff, Search, Settings, Pencil } from "lucide-react";
+import { ArrowUpRight, ArrowDownRight, ArrowLeft, Plus, Trash, X, Microphone, MicrophoneSlash, MagnifyingGlass, Gear, Pencil } from "@phosphor-icons/react";
 import { useToast } from "@/components/Toast";
 import { triggerHaptic } from "@/lib/haptics";
 import Link from "next/link";
@@ -252,7 +252,7 @@ export default function TransactionsPage() {
             href="/settings"
             className="w-8 h-8 flex items-center justify-center rounded-full bg-foreground/[0.05] border border-foreground/[0.07] text-foreground/60 hover:text-foreground hover:bg-foreground/[0.08] transition-colors"
           >
-            <Settings size={14} />
+            <Gear size={14} />
           </Link>
           <button onClick={() => { if (showForm && editingTx) { closeForm(); } else if (showForm) { closeForm(); } else { resetForm(); setShowForm(true); } }}
             className={`p-2.5 rounded-xl transition-all duration-300 ${showForm ? "bg-red-500/10 text-red-500 rotate-45" : ""}`}
@@ -265,7 +265,7 @@ export default function TransactionsPage() {
 
       <div className="animate-fade-in-up delay-1 space-y-2.5 relative z-10">
         <div className="relative">
-          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-foreground/30" />
+          <MagnifyingGlass size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-foreground/30" />
           <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Cari transaksi..." className="input-premium w-full pl-10 text-sm" />
         </div>
         <div className="flex gap-2">
@@ -404,7 +404,7 @@ export default function TransactionsPage() {
                           : "bg-primary/10 text-primary hover:bg-primary/20"
                       }`}
                     >
-                      {isListening ? <MicOff size={14} /> : <Mic size={14} />}
+                      {isListening ? <MicrophoneSlash size={14} /> : <Microphone size={14} />}
                     </button>
                   </div>
                 </div>
@@ -446,7 +446,7 @@ export default function TransactionsPage() {
                   <div key={tx.id} className="tx-row glass-card flex items-center justify-between rounded-xl p-3.5 group">
                     <div className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer" onClick={() => openEdit(tx)}>
                       <div className={`p-2 rounded-xl shrink-0 ${tx.type==="income"?"bg-sky-400/10 text-sky-400":"bg-rose-400/10 text-rose-400"}`}>
-                        {tx.type==="income" ? <ArrowUpRight size={16} strokeWidth={2.5}/> : <ArrowDownRight size={16} strokeWidth={2.5}/>}
+                        {tx.type==="income" ? <ArrowUpRight size={16} weight="bold"/> : <ArrowDownRight size={16} weight="bold"/>}
                       </div>
                       <div className="min-w-0">
                         <p className="font-semibold text-sm truncate">{tx.merchantName || tx.category}</p>
@@ -456,7 +456,7 @@ export default function TransactionsPage() {
                     <div className="flex items-center gap-2">
                       <p className={`font-bold text-sm whitespace-nowrap ${tx.type==="income"?"text-sky-500":"text-rose-400"}`}>{tx.type==="income"?"+":"-"}{fmtRp(tx.amount)}</p>
                       <button onClick={() => openEdit(tx)} aria-label="Edit transaksi" className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 p-1.5 text-foreground/20 hover:text-blue-500 rounded-lg hover:bg-blue-500/10 transition-all"><Pencil size={14}/></button>
-                      <button onClick={() => del(tx.id)} aria-label="Hapus transaksi" className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 p-1.5 text-foreground/20 hover:text-rose-400 rounded-lg hover:bg-rose-400/10 transition-all"><Trash2 size={14}/></button>
+                      <button onClick={() => del(tx.id)} aria-label="Hapus transaksi" className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 p-1.5 text-foreground/20 hover:text-rose-400 rounded-lg hover:bg-rose-400/10 transition-all"><Trash size={14}/></button>
                     </div>
                   </div>
                 ))}

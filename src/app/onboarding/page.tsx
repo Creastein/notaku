@@ -6,9 +6,9 @@ import { addTransaction, saveUserProfile, loadProfileFromFirestore, migrateTrans
 import { useAuth } from "@/lib/auth-context";
 import gsap from "gsap";
 import { 
-  ScanLine, BarChart3, Bot, ChevronRight, Sparkles, 
-  User, Building2, Briefcase, CalendarDays, Target, LogIn
-} from "lucide-react";
+  Scan, ChartBar, Robot, CaretRight, Sparkle, 
+  User, Buildings, Briefcase, Calendar, Target, SignIn
+} from "@phosphor-icons/react";
 import { GradientOrbs } from "@/components/effects/GradientOrbs";
 import { TiltCard } from "@/components/effects/TiltCard";
 
@@ -45,7 +45,7 @@ const STEPS: Step[] = [
   {
     id: "intro1",
     type: "intro",
-    icon: ScanLine,
+    icon: Scan,
     emoji: "📸",
     title: "Scan Struk Otomatis",
     desc: "Foto struk belanja dan AI akan membaca otomatis. Tidak perlu input manual lagi!",
@@ -54,7 +54,7 @@ const STEPS: Step[] = [
   {
     id: "intro2",
     type: "intro",
-    icon: BarChart3,
+    icon: ChartBar,
     emoji: "📊",
     title: "Laporan Visual",
     desc: "Lihat grafik pemasukan & pengeluaran. Pahami kondisi bisnis dalam sekejap.",
@@ -63,7 +63,7 @@ const STEPS: Step[] = [
   {
     id: "intro3",
     type: "intro",
-    icon: Bot,
+    icon: Robot,
     emoji: "🤖",
     title: "AI Penasihat Bisnis",
     desc: "Tanya apa saja soal keuangan. AI kami siap bantu 24/7 dengan saran yang relevan.",
@@ -85,7 +85,7 @@ const STEPS: Step[] = [
     id: "businessName",
     type: "input",
     inputType: "text",
-    icon: Building2,
+    icon: Buildings,
     emoji: "🏪",
     title: "Apa nama usahamu?",
     desc: "Identitas dari bisnis hebat yang sedang kamu bangun.",
@@ -105,7 +105,7 @@ const STEPS: Step[] = [
   {
     id: "businessAge",
     type: "select",
-    icon: CalendarDays,
+    icon: Calendar,
     emoji: "⏳",
     title: "Sudah berapa lama berdiri?",
     desc: "Membantu AI menyusun strategi yang tepat.",
@@ -140,6 +140,8 @@ export default function OnboardingPage() {
   const cur = STEPS[step];
   const isLast = step === STEPS.length - 1;
 
+
+
   useEffect(() => {
     // Animate content change
     if (contentRef.current) {
@@ -155,7 +157,12 @@ export default function OnboardingPage() {
   async function handleGoogleLogin() {
     setGoogleLoading(true);
     try {
-      const user = await signInWithGoogle();
+      // Add timeout to prevent infinite hang
+      const timeoutPromise = new Promise<null>((_, reject) => 
+        setTimeout(() => reject(new Error("Login timeout - popup mungkin diblokir browser")), 30000)
+      );
+      
+      const user = await Promise.race([signInWithGoogle(), timeoutPromise]);
       if (!user) {
         setGoogleLoading(false);
         return;
@@ -166,12 +173,7 @@ export default function OnboardingPage() {
       if (existingProfile) {
         // Profile found! User has used NotaKu before — skip onboarding
         localStorage.setItem("notaku_onboarded", "true");
-        gsap.to(containerRef.current, {
-          opacity: 0,
-          scale: 0.95,
-          duration: 0.5,
-          onComplete: () => router.push("/"),
-        });
+        router.push("/");
         return;
       }
 
@@ -193,8 +195,9 @@ export default function OnboardingPage() {
           setInputValue(user.displayName || "");
         },
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Google login error:", error);
+      alert("Login gagal: " + (error?.message || "Coba lagi atau lewati intro untuk daftar manual."));
     } finally {
       setGoogleLoading(false);
     }
@@ -232,14 +235,7 @@ export default function OnboardingPage() {
     
     localStorage.setItem("notaku_onboarded", "true");
     
-    gsap.to(containerRef.current, {
-      opacity: 0,
-      scale: 0.95,
-      duration: 0.5,
-      onComplete: () => {
-        router.push("/");
-      }
-    });
+    router.push("/");
   }
 
   const handleNext = () => {
@@ -403,9 +399,9 @@ export default function OnboardingPage() {
             {loading ? (
               <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Menyimpan...</>
             ) : isLast ? (
-              <><Sparkles size={18}/> Selesai</>
+              <><Sparkle size={18}/> Selesai</>
             ) : (
-              <>Lanjut <ChevronRight size={18} strokeWidth={2.5}/></>
+              <>Lanjut <CaretRight size={18} weight="bold" /></>
             )}
           </button>
 

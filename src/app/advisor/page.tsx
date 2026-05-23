@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Send, Sparkles, Loader2, Trash2, Bot, Settings } from "lucide-react";
+import { PaperPlaneRight, Sparkle, Trash, Robot, Gear } from "@phosphor-icons/react";
 import Link from "next/link";
 import { getTransactions, getUserProfile, UserProfile } from "@/lib/storage";
 import { useRouter } from "next/navigation";
@@ -143,7 +143,7 @@ export default function AdvisorPage() {
       <div className="p-5 pt-5 flex items-center justify-between animate-fade-in-up relative z-10" style={{ borderBottom: "1px solid var(--border)" }}>
         <div className="flex items-center gap-3">
           <div className="p-2.5 rounded-2xl relative" style={{ background: "var(--gradient-primary)", boxShadow: "0 4px 16px rgba(9, 60, 93, 0.3)" }}>
-            <Bot size={20} className="text-white" />
+            <Robot size={20} className="text-white" />
             <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-[#2dd4bf] rounded-full border-2 border-white animate-pulse" />
           </div>
           <div>
@@ -153,13 +153,13 @@ export default function AdvisorPage() {
         </div>
         <div className="flex items-center gap-2">
           {messages.length > 0 && (
-            <button onClick={() => setMessages([])} aria-label="Hapus percakapan" className="p-2 text-foreground/20 hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-all"><Trash2 size={16}/></button>
+            <button onClick={() => setMessages([])} aria-label="Hapus percakapan" className="p-2 text-foreground/20 hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-all"><Trash size={16}/></button>
           )}
           <Link
             href="/settings"
             className="w-8 h-8 flex items-center justify-center rounded-full bg-foreground/[0.05] border border-foreground/[0.07] text-foreground/60 hover:text-foreground hover:bg-foreground/[0.08] transition-colors"
           >
-            <Settings size={14} />
+            <Gear size={14} />
           </Link>
         </div>
       </div>
@@ -171,7 +171,7 @@ export default function AdvisorPage() {
             <TiltCard>
               <div className="text-center py-8">
                 <div className="inline-flex p-4 rounded-3xl mb-4" style={{ background: "var(--gradient-primary)", boxShadow: "0 8px 24px rgba(9, 60, 93, 0.3)" }}>
-                  <Sparkles size={32} className="text-white" />
+                  <Sparkle size={32} className="text-white" />
                 </div>
                 <p className="font-extrabold text-lg">Halo! Saya NotaKu AI</p>
                 <p className="text-sm text-foreground/40 mt-1">Tanya apa saja tentang keuangan bisnismu</p>
@@ -192,7 +192,7 @@ export default function AdvisorPage() {
             <div key={msg.id} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"} animate-fade-in-up`} style={{ animationDelay: `${i * 0.05}s` }}>
               {msg.role === "model" && (
                 <div className="w-7 h-7 rounded-xl flex items-center justify-center shrink-0 mr-2 mt-1" style={{ background: "var(--gradient-primary)" }}>
-                  <Bot size={14} className="text-white" />
+                  <Robot size={14} className="text-white" />
                 </div>
               )}
               <div className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm whitespace-pre-wrap leading-relaxed ${
@@ -210,7 +210,7 @@ export default function AdvisorPage() {
         {loading && (
           <div className="flex justify-start animate-fade-in">
             <div className="w-7 h-7 rounded-xl flex items-center justify-center shrink-0 mr-2 mt-1" style={{ background: "var(--gradient-primary)" }}>
-              <Bot size={14} className="text-white" />
+              <Robot size={14} className="text-white" />
             </div>
             <div className="glass-card rounded-2xl rounded-bl-md px-5 py-4 flex gap-1.5">
               <div className="typing-dot" />
@@ -249,7 +249,7 @@ export default function AdvisorPage() {
             <button type="submit" disabled={loading || !input.trim()}
               className="p-2.5 rounded-xl transition-all disabled:opacity-30 shrink-0"
               style={{ background: "var(--gradient-primary)", color: "white", boxShadow: "0 2px 12px rgba(9, 60, 93, 0.3)" }}
-            ><Send size={18}/></button>
+            ><PaperPlaneRight size={18}/></button>
           </form>
         </div>
       </div>

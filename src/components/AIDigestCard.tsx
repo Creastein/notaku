@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Transaction } from "@/types";
-import { Sparkles, Bot, TrendingUp, Lightbulb } from "lucide-react";
+import { Sparkle, Robot, TrendUp, Lightbulb } from "@phosphor-icons/react";
 
 interface AIDigestData {
   summary: string;
@@ -108,7 +108,7 @@ export function AIDigestCard({ transactions }: AIDigestCardProps) {
       <div className="glass-card rounded-2xl p-5 animate-fade-in relative overflow-hidden">
         <div className="flex items-center gap-3 mb-4">
           <div className="bg-primary/20 p-2 rounded-xl">
-            <Bot size={20} className="text-primary animate-pulse" />
+            <Robot size={20} className="text-primary animate-pulse" />
           </div>
           <div className="space-y-1.5 flex-1">
             <div className="h-4 w-32 shimmer rounded" />
@@ -135,7 +135,7 @@ export function AIDigestCard({ transactions }: AIDigestCardProps) {
         {/* Header */}
         <div className="flex items-start gap-3 mb-4">
           <div className="bg-gradient-to-br from-[#38bdf8] to-[#093c5d] p-2 rounded-xl shadow-sm mt-0.5">
-            <Sparkles size={18} className="text-white" />
+            <Sparkle size={18} className="text-white" />
           </div>
           <div>
             <p className="text-sm font-bold bg-clip-text text-transparent bg-gradient-to-r from-[#093c5d] to-[#3b7597] mb-1">
@@ -153,7 +153,7 @@ export function AIDigestCard({ transactions }: AIDigestCardProps) {
             {digest.insights.map((insight, idx) => (
               <div key={idx} className="flex items-start gap-2.5 bg-foreground/[0.03] p-3 rounded-xl">
                 <div className="mt-0.5 text-[#3b7597]">
-                  <TrendingUp size={16} />
+                  <TrendUp size={16} />
                 </div>
                 <p className="text-[13px] font-medium text-foreground/75 leading-relaxed">
                   {insight}

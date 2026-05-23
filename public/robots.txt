@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /onboarding
+Sitemap: https://notaku-jvcwellinotaku.a.run.app/sitemap.xml
