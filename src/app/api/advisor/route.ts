@@ -1,6 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
-import { geminiModel } from "@/lib/gemini";
 import { checkRateLimit } from "@/lib/rateLimit";
+import { GoogleGenerativeAI, SchemaType, ResponseSchema } from "@google/generative-ai";
+
+const advisorSchema: ResponseSchema = {
+  type: SchemaType.OBJECT,
+  properties: {
+    reply: { type: SchemaType.STRING, description: "Teks jawaban lengkap kontekstual dan sopan, menggunakan markdown cetak tebal ** untuk penekanan, diakhiri dengan 1 langkah nyata." },
+    followUps: {
+      type: SchemaType.ARRAY,
+      description: "Daftar 3 saran pertanyaan lanjutan kontekstual dan pendek",
+      items: { type: SchemaType.STRING }
+    }
+  },
+  required: ["reply", "followUps"]
+};
 
 const MAX_MESSAGE_LENGTH = 1000;
 
@@ -66,7 +79,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const model = geminiModel;
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
+    const model = genAI.getGenerativeModel(
+      {
+        model: "gemini-2.5-flash",
+        generationConfig: {
+          responseMimeType: "application/json",
+          responseSchema: advisorSchema,
+        }
+      },
+      { apiVersion: "v1beta" }
+    );
 
 
     const targetRevenueStr = sanitizedProfile.targetMonthlyRevenue > 0
@@ -109,13 +132,7 @@ FORMAT OUTPUT (HARUS JSON MURNI):
       `Pertanyaan pengguna: ${message}`,
     ]);
 
-    let responseText = result.response.text().trim();
-    
-    // Clean markdown
-    responseText = responseText
-      .replace(/^```json\s*/i, "")
-      .replace(/^```\s*/i, "")
-      .replace(/\s*```$/i, "");
+    const responseText = result.response.text().trim();
 
     try {
       const parsed = JSON.parse(responseText);

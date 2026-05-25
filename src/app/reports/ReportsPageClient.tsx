@@ -65,13 +65,39 @@ export default function ReportsPageClient() {
     setProfile(getUserProfile());
   }, []);
 
+  // Robust local date formatting to prevent timezone shifts and Safari parsing bugs
+  function getLocalDateString(dateInput: any): string {
+    try {
+      if (!dateInput) return "";
+      const dateObj = new Date(dateInput);
+      if (isNaN(dateObj.getTime())) return "";
+      
+      // If it's a pure YYYY-MM-DD string, return directly
+      if (typeof dateInput === "string" && /^\d{4}-\d{2}-\d{2}$/.test(dateInput)) {
+        return dateInput;
+      }
+      
+      const year = dateObj.getFullYear();
+      const month = String(dateObj.getMonth() + 1).padStart(2, "0");
+      const day = String(dateObj.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    } catch {
+      return "";
+    }
+  }
+
   // All Date-dependent calculations only run client-side after mount
   const now = mounted ? new Date() : new Date(0);
-  const periodTxs = mounted ? txs.filter(t => new Date(t.date) >= subDays(now, period)) : [];
+  const threshold = startOfDay(subDays(now, period));
+  const periodTxs = mounted ? txs.filter(t => {
+    const tDate = new Date(t.date);
+    return !isNaN(tDate.getTime()) && tDate >= threshold;
+  }) : [];
 
   const daily = mounted ? Array.from({ length: Math.min(period, 14) }, (_, i) => {
     const d = startOfDay(subDays(now, Math.min(period, 14) - 1 - i));
-    const day = periodTxs.filter(t => startOfDay(new Date(t.date)).getTime() === d.getTime());
+    const dStr = getLocalDateString(d);
+    const day = periodTxs.filter(t => getLocalDateString(t.date) === dStr);
     return {
       name: format(d, "dd/MM"),
       pemasukan: day.filter(t => t.type === "income").reduce((s, t) => s + t.amount, 0),
@@ -105,7 +131,7 @@ export default function ReportsPageClient() {
     if (!mounted || txs.length === 0) return;
     
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 12000); // 12 seconds client-side timeout
+    const timeoutId = setTimeout(() => controller.abort(), 20000); // 20 seconds client-side timeout
 
     async function fetchAiAnalysis() {
       if (isFetchingRef.current) return;
@@ -761,24 +787,26 @@ export default function ReportsPageClient() {
             {/* Bar Chart */}
             <div className="glass-card rounded-2xl p-4 animate-fade-in-up delay-4">
               <h3 className="font-extrabold text-sm mb-4 tracking-tight">Pemasukan vs Pengeluaran</h3>
-              <ResponsiveContainer width="100%" height={200}>
-                <BarChart data={daily}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                  <XAxis dataKey="name" tick={{ fontSize: 10, fontWeight: 600, fill: "var(--foreground)", opacity: 0.5 }} tickLine={false} axisLine={false} />
-                  <YAxis tick={{ fontSize: 10, fontWeight: 600, fill: "var(--foreground)", opacity: 0.5 }} tickFormatter={formatYAxis} tickLine={false} axisLine={false} />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Bar dataKey="pemasukan" name="Pemasukan" fill="#2dd4bf" radius={[6, 6, 0, 0]} isAnimationActive={false} />
-                  <Bar dataKey="pengeluaran" name="Pengeluaran" fill="#fb7185" radius={[6, 6, 0, 0]} isAnimationActive={false} />
-                </BarChart>
-              </ResponsiveContainer>
+              <div className="w-full h-[200px] relative min-w-0">
+                <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                  <BarChart data={daily}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                    <XAxis dataKey="name" tick={{ fontSize: 10, fontWeight: 600, fill: "var(--foreground)", opacity: 0.5 }} tickLine={false} axisLine={false} />
+                    <YAxis tick={{ fontSize: 10, fontWeight: 600, fill: "var(--foreground)", opacity: 0.5 }} tickFormatter={formatYAxis} tickLine={false} axisLine={false} />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Bar dataKey="pemasukan" name="Pemasukan" fill="#2dd4bf" radius={[6, 6, 0, 0]} isAnimationActive={false} />
+                    <Bar dataKey="pengeluaran" name="Pengeluaran" fill="#fb7185" radius={[6, 6, 0, 0]} isAnimationActive={false} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
             </div>
 
             {/* Pie Chart */}
             {catData.length > 0 && (
               <div className="glass-card rounded-2xl p-4 animate-fade-in-up delay-5">
                 <h3 className="font-extrabold text-sm mb-4 tracking-tight">Pengeluaran per Kategori</h3>
-                <div className="relative flex items-center justify-center h-[200px]">
-                  <ResponsiveContainer width="100%" height="100%">
+                <div className="relative flex items-center justify-center h-[200px] w-full min-w-0">
+                  <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                     <PieChart>
                       <Pie
                         data={catData}
@@ -831,21 +859,23 @@ export default function ReportsPageClient() {
             {trend.length > 1 && (
               <div className="glass-card rounded-2xl p-4 animate-fade-in-up delay-6">
                 <h3 className="font-extrabold text-sm mb-4 tracking-tight">Tren Profit</h3>
-                <ResponsiveContainer width="100%" height={200}>
-                  <AreaChart data={trend}>
-                    <defs>
-                      <linearGradient id="profitGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#2dd4bf" stopOpacity={0.3} />
-                        <stop offset="95%" stopColor="#2dd4bf" stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                    <XAxis dataKey="date" tick={{ fontSize: 10, fontWeight: 600, fill: "var(--foreground)", opacity: 0.5 }} tickLine={false} axisLine={false} />
-                    <YAxis tick={{ fontSize: 10, fontWeight: 600, fill: "var(--foreground)", opacity: 0.5 }} tickFormatter={formatYAxis} tickLine={false} axisLine={false} />
-                    <Tooltip content={<CustomTooltip />} />
-                    <Area type="monotone" name="Tren Profit" dataKey="profit" stroke="#2dd4bf" strokeWidth={2.5} fill="url(#profitGrad)" dot={{ r: 3.5, fill: "#2dd4bf", strokeWidth: 1, stroke: "#fff" }} isAnimationActive={false} />
-                  </AreaChart>
-                </ResponsiveContainer>
+                <div className="w-full h-[200px] relative min-w-0">
+                  <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                    <AreaChart data={trend}>
+                      <defs>
+                        <linearGradient id="profitGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#2dd4bf" stopOpacity={0.3} />
+                          <stop offset="95%" stopColor="#2dd4bf" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                      <XAxis dataKey="date" tick={{ fontSize: 10, fontWeight: 600, fill: "var(--foreground)", opacity: 0.5 }} tickLine={false} axisLine={false} />
+                      <YAxis tick={{ fontSize: 10, fontWeight: 600, fill: "var(--foreground)", opacity: 0.5 }} tickFormatter={formatYAxis} tickLine={false} axisLine={false} />
+                      <Tooltip content={<CustomTooltip />} />
+                      <Area type="monotone" name="Tren Profit" dataKey="profit" stroke="#2dd4bf" strokeWidth={2.5} fill="url(#profitGrad)" dot={{ r: 3.5, fill: "#2dd4bf", strokeWidth: 1, stroke: "#fff" }} isAnimationActive={false} />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
               </div>
             )}
           </div>

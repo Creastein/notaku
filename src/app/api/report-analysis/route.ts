@@ -1,6 +1,42 @@
 import { NextRequest, NextResponse } from "next/server";
-import { geminiModel } from "@/lib/gemini";
 import { checkRateLimit } from "@/lib/rateLimit";
+import { GoogleGenerativeAI, SchemaType, ResponseSchema } from "@google/generative-ai";
+
+const reportAnalysisSchema: ResponseSchema = {
+  type: SchemaType.OBJECT,
+  properties: {
+    healthScore: { type: SchemaType.NUMBER, description: "Skor kesehatan bisnis antara 0-100" },
+    healthLabel: { type: SchemaType.STRING, description: "Label kesehatan bisnis: Kritis, Perlu Perhatian, Sehat, atau Sangat Sehat" },
+    executiveSummary: { type: SchemaType.STRING, description: "Ringkasan eksekutif 2-3 kalimat tentang kondisi bisnis" },
+    keyFindings: {
+      type: SchemaType.ARRAY,
+      description: "Daftar 2-3 temuan penting berdasarkan data dengan angka spesifik",
+      items: { type: SchemaType.STRING }
+    },
+    risks: {
+      type: SchemaType.ARRAY,
+      description: "Daftar risiko atau peringatan keuangan bagi bisnis",
+      items: { type: SchemaType.STRING }
+    },
+    recommendations: {
+      type: SchemaType.ARRAY,
+      description: "Daftar rekomendasi tindakan CFO",
+      items: {
+        type: SchemaType.OBJECT,
+        properties: {
+          title: { type: SchemaType.STRING, description: "Judul singkat rekomendasi" },
+          description: { type: SchemaType.STRING, description: "Penjelasan detail dan langkah konkret" },
+          priority: { type: SchemaType.STRING, description: "Tingkat prioritas (Tinggi/Sedang/Rendah)" },
+          estimatedImpact: { type: SchemaType.STRING, description: "Perkiraan dampak positif secara finansial atau operasional" }
+        },
+        required: ["title", "description", "priority", "estimatedImpact"]
+      }
+    },
+    cashflowVerdict: { type: SchemaType.STRING, description: "Status aliran kas: Positif/Negatif/Breakeven beserta penjelasan singkat" },
+    targetProgress: { type: SchemaType.STRING, description: "Persentase pencapaian terhadap target omset bulanan pemilik, atau 'Target belum ditentukan'" }
+  },
+  required: ["healthScore", "healthLabel", "executiveSummary", "keyFindings", "risks", "recommendations", "cashflowVerdict", "targetProgress"]
+};
 
 export async function POST(request: NextRequest) {
   try {
@@ -81,20 +117,26 @@ FORMAT OUTPUT (HARUS JSON MURNI):
 Pastikan output HANYA JSON valid tanpa markdown atau teks tambahan.
     `.trim();
 
-    // Timeout of 9 seconds for Gemini API response to ensure API route responds before gateway timeouts
-    const geminiPromise = geminiModel.generateContent(prompt);
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
+    const model = genAI.getGenerativeModel(
+      {
+        model: "gemini-2.5-flash",
+        generationConfig: {
+          responseMimeType: "application/json",
+          responseSchema: reportAnalysisSchema,
+        }
+      },
+      { apiVersion: "v1beta" }
+    );
+
+    // Timeout of 15 seconds for Gemini API response to ensure API route responds before gateway timeouts
+    const geminiPromise = model.generateContent(prompt);
     const timeoutPromise = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error("Gemini API Timeout")), 9000)
+      setTimeout(() => reject(new Error("Gemini API Timeout")), 15000)
     );
 
     const result = await Promise.race([geminiPromise, timeoutPromise]);
-    let responseText = result.response.text().trim();
-
-    // Clean markdown formatting
-    responseText = responseText
-      .replace(/^```json\s*/i, "")
-      .replace(/^```\s*/i, "")
-      .replace(/\s*```$/i, "");
+    const responseText = result.response.text().trim();
 
     try {
       const parsed = JSON.parse(responseText);
