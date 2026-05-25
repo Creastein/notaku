@@ -11,6 +11,15 @@
 
 $ErrorActionPreference = "Stop"
 
+# Load GEMINI_API_KEY from .env.local if not already in environment
+if (-not $env:GEMINI_API_KEY -and (Test-Path ".env.local")) {
+    Get-Content ".env.local" | ForEach-Object {
+        if ($_ -match "^GEMINI_API_KEY=(.+)$") {
+            $env:GEMINI_API_KEY = $Matches[1].Trim()
+        }
+    }
+}
+
 # --- Configuration ---
 $PROJECT_ID = "sapient-reducer-495808-i1"
 $REGION = "asia-southeast2"  # Jakarta
