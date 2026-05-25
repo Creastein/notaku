@@ -13,7 +13,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://notaku-jvcwellinotaku.a.run.app"), // URL Cloud Run production
+  metadataBase: new URL("https://notaku-298937480116.asia-southeast2.run.app"), // URL Cloud Run production
   title: "NotaKu — AI Pembukuan UMKM",
   description:
     "Pembukuan otomatis dengan scan nota AI dan penasihat bisnis pintar. Kelola keuangan UMKM Anda dengan mudah.",
@@ -26,13 +26,14 @@ export const metadata: Metadata = {
   openGraph: {
     title: "NotaKu — AI Pembukuan UMKM",
     description: "Pembukuan otomatis dengan scan nota AI dan penasihat bisnis pintar.",
-    url: "https://notaku-jvcwellinotaku.a.run.app", // URL Cloud Run production
+    url: "https://notaku-298937480116.asia-southeast2.run.app", // URL Cloud Run production
     siteName: "NotaKu",
     images: [
       {
-        url: "/icon-512x512.png",
-        width: 512,
-        height: 512,
+        url: "/og-image.jpg",
+        width: 1200,
+        height: 630,
+        alt: "NotaKu — AI Pembukuan UMKM Indonesia",
       },
     ],
     locale: "id_ID",
@@ -42,7 +43,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "NotaKu — AI Pembukuan UMKM",
     description: "Pembukuan otomatis dengan scan nota AI dan penasihat bisnis pintar.",
-    images: ["/icon-512x512.png"],
+    images: ["/og-image.jpg"],
   },
 };
 
