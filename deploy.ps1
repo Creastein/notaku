@@ -40,7 +40,7 @@ gcloud run deploy $SERVICE_NAME `
   --min-instances 0 `
   --max-instances 3 `
   --set-env-vars "GEMINI_API_KEY=$env:GEMINI_API_KEY" `
-  --set-build-env-vars "NEXT_PUBLIC_FIREBASE_API_KEY=AIzaSyB1W9KlNBV0zuEhii56qO0gdo2M5f8spJE,NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=jvcwellinotaku.firebaseapp.com,NEXT_PUBLIC_FIREBASE_PROJECT_ID=jvcwellinotaku,NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=jvcwellinotaku.firebasestorage.app,NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=799970342476,NEXT_PUBLIC_FIREBASE_APP_ID=1:799970342476:web:0c51fb57f7fe2576f826e9"
+  --set-build-env-vars "NEXT_PUBLIC_FIREBASE_API_KEY=AIzaSyB1W9KINBV0zuEhii56qO0gdo2M5f8spJE,NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=jvcwellinotaku.firebaseapp.com,NEXT_PUBLIC_FIREBASE_PROJECT_ID=jvcwellinotaku,NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=jvcwellinotaku.firebasestorage.app,NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=799970342476,NEXT_PUBLIC_FIREBASE_APP_ID=1:799970342476:web:0c51fb57f7fe2576f826e9"
 
 Write-Host ""
 Write-Host " Deployment selesai!" -ForegroundColor Green
