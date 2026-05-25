@@ -500,8 +500,8 @@ export default function HomePageClient() {
       )}
 
       {/* ── HEADER ── */}
-      <div className="page-header flex items-center justify-between pt-3">
-        <div className="flex items-center gap-3">
+      <div className="page-header flex items-center justify-between pt-3 gap-2">
+        <div className="flex items-center gap-3 min-w-0">
           <div className="w-14 h-14 shrink-0">
             <img
               src="/logo.png"
@@ -509,10 +509,10 @@ export default function HomePageClient() {
               className="w-full h-full object-contain"
             />
           </div>
-          <div>
-            <p className="text-[13px] text-foreground/45 font-bold tracking-wide uppercase leading-none flex items-center gap-1.5">
-              <span>{greeting.text}</span>
-              <span className="text-2xl leading-none translate-y-[-2px]">{greeting.emoji}</span>
+          <div className="min-w-0">
+            <p className="text-[12px] text-foreground/45 font-bold tracking-wide uppercase leading-none whitespace-nowrap flex items-center gap-1">
+              <span className="truncate">{greeting.text}</span>
+              <span className="text-base leading-none translate-y-[-1px] shrink-0">{greeting.emoji}</span>
             </p>
             <h1 className="text-3xl font-black tracking-[-0.03em] mt-2 leading-none">
               Nota<span className="gradient-text">Ku</span>
@@ -520,11 +520,11 @@ export default function HomePageClient() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 shrink-0">
           {mounted && showDemoBtn && (
             <button
               onClick={handleSeedDemo}
-              className="flex items-center gap-1.5 text-[11px] font-bold px-3 py-1.5 rounded-full"
+              className="flex items-center gap-1.5 text-[11px] font-bold px-3 py-1.5 rounded-full shrink-0"
               style={{
                 background: "var(--gradient-primary)",
                 color: "white",
@@ -536,9 +536,9 @@ export default function HomePageClient() {
             </button>
           )}
           {/* Tx count badge */}
-          <div className="flex items-center gap-1.5 bg-foreground/[0.05] border border-foreground/[0.07] px-2.5 py-1.5 rounded-full">
-            <div className="w-1.5 h-1.5 rounded-full bg-sky-400 animate-pulse" />
-            <span className="text-[11px] font-bold text-foreground/60">
+          <div className="flex items-center gap-1.5 bg-foreground/[0.05] border border-foreground/[0.07] px-3 py-1.5 rounded-full shrink-0">
+            <div className="w-1.5 h-1.5 rounded-full bg-sky-400 animate-pulse shrink-0" />
+            <span className="text-[11px] font-bold text-foreground/60 whitespace-nowrap">
               {txCount} trx
             </span>
           </div>
@@ -546,7 +546,7 @@ export default function HomePageClient() {
           {/* Settings link */}
           <Link
             href="/settings"
-            className="w-8 h-8 flex items-center justify-center rounded-full bg-foreground/[0.05] border border-foreground/[0.07] text-foreground/60 hover:text-foreground hover:bg-foreground/[0.08] transition-colors"
+            className="w-8 h-8 flex items-center justify-center rounded-full bg-foreground/[0.05] border border-foreground/[0.07] text-foreground/60 hover:text-foreground hover:bg-foreground/[0.08] transition-colors shrink-0"
           >
             <Gear size={14} />
           </Link>
