@@ -125,8 +125,8 @@ Script ini akan otomatis mengunggah kode ke Cloud Build, membangun container Doc
 
 ## 🎥 Video Demo & Link Live
 
-*   **Link Aplikasi Live (Google Cloud Run)**: *[Tautan Cloud Run Anda]*
-*   **Video Demo Produk (LinkedIn)**: *[Tautan Postingan LinkedIn Anda]*
+*   **Link Aplikasi Live (Google Cloud Run)**: https://notaku-298937480116.asia-southeast2.run.app
+*   **Video Demo Produk (LinkedIn)**: *(Coming Soon — akan diupdate setelah video demo dipublikasikan)*
 
 ---
 
