@@ -36,6 +36,7 @@ gcloud config set project $PROJECT_ID
 echo -e "${YELLOW}🏗️  Building and deploying...${NC}"
 gcloud run deploy $SERVICE_NAME \
   --source . \
+  --clear-base-image \
   --region $REGION \
   --platform managed \
   --allow-unauthenticated \

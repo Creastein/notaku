@@ -31,6 +31,7 @@ gcloud config set project $PROJECT_ID
 Write-Host " Building and deploying (ini bisa 5-10 menit)..." -ForegroundColor Yellow
 gcloud run deploy $SERVICE_NAME `
   --source . `
+  --clear-base-image `
   --region $REGION `
   --platform managed `
   --allow-unauthenticated `
