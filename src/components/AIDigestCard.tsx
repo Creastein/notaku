@@ -131,17 +131,17 @@ export function AIDigestCard({ transactions }: AIDigestCardProps) {
       <div className="absolute inset-0 bg-gradient-to-r from-[#38bdf8] via-cyan-500 to-[#3b7597] opacity-60 blur-[3px]" />
       <div className="absolute inset-0 bg-gradient-to-r from-[#38bdf8] via-cyan-500 to-[#3b7597] opacity-40 animate-pulse" />
       
-      <div className="relative bg-white/35 dark:bg-slate-950/40 backdrop-blur-2xl rounded-2xl p-5 h-full">
+      <div className="relative bg-gradient-to-br from-[#093c5d] to-[#1e5a7b] shadow-xl backdrop-blur-2xl rounded-2xl p-5 h-full text-white">
         {/* Header */}
         <div className="flex items-start gap-3 mb-4">
-          <div className="bg-gradient-to-br from-[#38bdf8] to-[#093c5d] p-2 rounded-xl shadow-sm mt-0.5">
-            <Sparkle size={18} className="text-white" />
+          <div className="bg-white/10 border border-white/20 p-2 rounded-xl shadow-sm mt-0.5">
+            <Sparkle size={18} className="text-white drop-shadow-sm" />
           </div>
           <div>
-            <p className="text-sm font-bold bg-clip-text text-transparent bg-gradient-to-r from-[#093c5d] to-[#3b7597] mb-1">
+            <p className="text-sm font-bold text-white tracking-wide mb-1 drop-shadow-sm">
               Insight Mingguan AI
             </p>
-            <p className="text-sm font-medium leading-snug text-foreground/80">
+            <p className="text-sm font-medium leading-snug text-white/90">
               {digest.summary}
             </p>
           </div>
@@ -151,11 +151,11 @@ export function AIDigestCard({ transactions }: AIDigestCardProps) {
         {digest.insights && digest.insights.length > 0 && (
           <div className="space-y-2.5 mb-4">
             {digest.insights.map((insight, idx) => (
-              <div key={idx} className="flex items-start gap-2.5 bg-foreground/[0.03] p-3 rounded-xl">
-                <div className="mt-0.5 text-[#3b7597]">
+              <div key={idx} className="flex items-start gap-2.5 bg-white/[0.06] border border-white/10 p-3 rounded-xl shadow-sm">
+                <div className="mt-0.5 text-sky-300">
                   <TrendUp size={16} />
                 </div>
-                <p className="text-[13px] font-medium text-foreground/75 leading-relaxed">
+                <p className="text-[13px] font-medium text-white/90 leading-relaxed">
                   {insight}
                 </p>
               </div>
@@ -165,13 +165,13 @@ export function AIDigestCard({ transactions }: AIDigestCardProps) {
 
         {/* Recommendation */}
         {digest.recommendation && (
-          <div className="bg-gradient-to-r from-slate-400/10 to-slate-500/10 border border-slate-400/20 p-3.5 rounded-xl flex items-start gap-3">
-            <div className="mt-0.5 text-slate-500">
-              <Lightbulb size={18} />
+          <div className="bg-sky-500/15 border border-sky-300/20 p-3.5 rounded-xl flex items-start gap-3 shadow-inner">
+            <div className="mt-0.5 text-yellow-300">
+              <Lightbulb size={18} weight="fill" />
             </div>
             <div>
-              <p className="text-xs font-bold text-slate-600 dark:text-slate-400 mb-0.5">Rekomendasi Tindakan</p>
-              <p className="text-[13px] font-medium text-foreground/80 leading-relaxed">
+              <p className="text-xs font-bold text-sky-100 mb-0.5">Rekomendasi Tindakan</p>
+              <p className="text-[13px] font-medium text-white/95 leading-relaxed">
                 {digest.recommendation}
               </p>
             </div>
