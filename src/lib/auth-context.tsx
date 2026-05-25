@@ -4,6 +4,8 @@ import { createContext, useContext, useEffect, useState, useCallback, ReactNode 
 import {
   User,
   signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   signOut as firebaseSignOut,
   onAuthStateChanged,
 } from "firebase/auth";
@@ -37,6 +39,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    // Handle redirect result when returning to the app on mobile
+    getRedirectResult(auth)
+      .then((result) => {
+        if (result?.user) {
+          setUser(result.user);
+          console.log("Google redirect login success:", result.user);
+        }
+      })
+      .catch((error) => {
+        console.error("Google redirect login error:", error);
+      });
+
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       setUser(firebaseUser);
       setLoading(false);
@@ -48,6 +62,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signInWithGoogle = useCallback(async (): Promise<User | null> => {
     if (!auth) return null;
     try {
+      // Check if it is a mobile device or running as standalone PWA
+      const isMobileOrPWA = 
+        /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+        window.matchMedia("(display-mode: standalone)").matches;
+
+      if (isMobileOrPWA) {
+        console.log("Mobile/PWA detected. Initiating signInWithRedirect...");
+        await signInWithRedirect(auth, googleProvider);
+        return null; // Will redirect away, execution stops here
+      }
+
       const result = await signInWithPopup(auth, googleProvider);
       return result.user;
     } catch (error: any) {
