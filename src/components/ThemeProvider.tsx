@@ -9,12 +9,12 @@ type ThemeContextType = {
 };
 
 const ThemeContext = createContext<ThemeContextType>({
-  theme: "system",
+  theme: "dark",
   setTheme: () => {},
 });
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<ThemeValue>("system");
+  const [theme, setThemeState] = useState<ThemeValue>("dark");
 
   useEffect(() => {
     setThemeState(getStoredTheme());

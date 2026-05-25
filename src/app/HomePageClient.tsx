@@ -542,24 +542,7 @@ export default function HomePageClient() {
               {txCount} trx
             </span>
           </div>
-          {/* Quick Theme Toggle */}
-          {mounted && (
-            <button
-              onClick={() => {
-                const nextTheme = theme === "dark" ? "light" : "dark";
-                setTheme(nextTheme);
-                showToast({
-                  type: "success",
-                  title: `Mode ${nextTheme === "dark" ? "Gelap" : "Terang"} Aktif! ✨`,
-                  message: `Aplikasi berhasil beralih ke tema ${nextTheme === "dark" ? "gelap" : "terang"}.`,
-                });
-              }}
-              className="w-8 h-8 flex items-center justify-center rounded-full bg-foreground/[0.05] border border-foreground/[0.07] text-foreground/60 hover:text-foreground hover:bg-foreground/[0.08] transition-colors"
-              title="Ganti Tema"
-            >
-              {theme === "dark" ? <Sun size={14} /> : <Moon size={14} />}
-            </button>
-          )}
+
           {/* Settings link */}
           <Link
             href="/settings"

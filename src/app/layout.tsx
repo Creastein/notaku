@@ -58,13 +58,8 @@ export const viewport: Viewport = {
 const themeScript = `
   (function() {
     try {
-      var theme = localStorage.getItem('notaku_theme') || 'system';
-      var isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-      if (isDark) {
-        document.documentElement.classList.add('dark');
-      } else {
-        document.documentElement.classList.remove('dark');
-      }
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('notaku_theme', 'dark');
     } catch (e) {}
   })();
 `;

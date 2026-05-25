@@ -272,33 +272,7 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {/* Tampilan Card */}
-        <div className="glass-card rounded-2xl p-5 border border-border shadow-sm space-y-4">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500">
-              <Sun size={20} className="dark:hidden" />
-              <Moon size={20} className="hidden dark:block" />
-            </div>
-            <h2 className="font-semibold text-foreground">Tampilan</h2>
-          </div>
 
-          <div className="flex bg-foreground/5 p-1 rounded-xl">
-            {(["light", "system", "dark"] as const).map((t) => (
-              <button
-                key={t}
-                onClick={() => setTheme(t)}
-                className={`flex-1 py-2 text-xs font-medium rounded-lg capitalize flex items-center justify-center gap-1.5 transition-all ${
-                  theme === t ? "bg-background shadow-sm text-foreground" : "text-foreground/50 hover:text-foreground"
-                }`}
-              >
-                {t === "light" && <Sun size={14} />}
-                {t === "dark" && <Moon size={14} />}
-                {t === "system" && <Desktop size={14} />}
-                {t === "system" ? "Sistem" : t === "light" ? "Terang" : "Gelap"}
-              </button>
-            ))}
-          </div>
-        </div>
 
         {/* App Info Card */}
         <div className="glass-card rounded-2xl p-5 border border-border shadow-sm space-y-4">
