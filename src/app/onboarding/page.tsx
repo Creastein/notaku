@@ -132,13 +132,96 @@ export default function OnboardingPage() {
   const [formData, setFormData] = useState<Partial<UserProfile>>({});
   const [inputValue, setInputValue] = useState("");
   const router = useRouter();
-  const { signInWithGoogle } = useAuth();
+  const { signInWithGoogle, user, authError } = useAuth();
   
   const containerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
 
   const cur = STEPS[step];
   const isLast = step === STEPS.length - 1;
+
+  // Handle redirect result auto-login when returning from Google redirect on mobile/PWA
+  useEffect(() => {
+    if (!user) return;
+
+    const currentUser = user;
+    let active = true;
+    setGoogleLoading(true);
+
+    async function handleAuthRedirect() {
+      try {
+        console.log("Redirect login detected for user:", currentUser.uid);
+        const existingProfile = await loadProfileFromFirestore(currentUser.uid);
+        if (!active) return;
+
+        if (existingProfile) {
+          console.log("Existing profile found, redirecting to home...");
+          localStorage.setItem("notaku_onboarded", "true");
+          router.push("/");
+          return;
+        }
+
+        console.log("No existing profile found. Continuing onboarding...");
+        // No existing profile — pre-fill name from Google account and continue onboarding
+        setFormData(prev => ({
+          ...prev,
+          ownerName: currentUser.displayName || "",
+          userId: currentUser.uid,
+        }));
+
+        // Jump to profile steps (skip intro)
+        if (contentRef.current) {
+          gsap.to(contentRef.current, {
+            opacity: 0,
+            x: -40,
+            scale: 0.95,
+            duration: 0.3,
+            onComplete: () => {
+              if (active) {
+                setStep(3); // ownerName step
+                setInputValue(currentUser.displayName || "");
+              }
+            },
+          });
+        } else {
+          setStep(3);
+          setInputValue(currentUser.displayName || "");
+        }
+      } catch (error) {
+        console.error("Failed to load profile on redirect login:", error);
+      } finally {
+        if (active) {
+          setGoogleLoading(false);
+        }
+      }
+    }
+
+    handleAuthRedirect();
+
+    return () => {
+      active = false;
+    };
+  }, [user, router]);
+
+  // Show detailed error messages if auth fails (especially on mobile/PWA)
+  useEffect(() => {
+    if (authError) {
+      console.error("Firebase auth error caught in onboarding:", authError);
+      let friendlyMessage = "Terjadi kesalahan koneksi ke Firebase.";
+      
+      if (authError.code === "auth/unauthorized-domain") {
+        friendlyMessage = `Domain ini belum didaftarkan di Firebase Console. Harap daftarkan "${window.location.hostname}" di Firebase -> Authentication -> Settings -> Authorized Domains.`;
+      } else if (authError.code === "auth/web-storage-unsupported" || authError.code === "auth/operation-not-supported-in-this-environment") {
+        friendlyMessage = "Browser Anda memblokir cookies/penyimpanan pihak ketiga (biasanya di Incognito). Harap gunakan tab browser biasa untuk masuk.";
+      } else if (authError.code === "auth/popup-blocked") {
+        friendlyMessage = "Pop-up diblokir oleh browser. Harap ijinkan pop-up atau klik kembali untuk menggunakan metode pengalihan.";
+      } else if (authError.message) {
+        friendlyMessage = `${authError.message} (Code: ${authError.code || "unknown"})`;
+      }
+      
+      alert(`⚠️ Gagal Menghubungkan Google:\n\n${friendlyMessage}\n\nSilakan coba lagi atau daftar manual.`);
+    }
+  }, [authError]);
 
 
 

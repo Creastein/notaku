@@ -16,6 +16,7 @@ interface AuthContextType {
   loading: boolean;
   signInWithGoogle: () => Promise<User | null>;
   signOut: () => Promise<void>;
+  authError: any;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -23,6 +24,7 @@ const AuthContext = createContext<AuthContextType>({
   loading: true,
   signInWithGoogle: async () => null,
   signOut: async () => {},
+  authError: null,
 });
 
 export function useAuth() {
@@ -32,6 +34,7 @@ export function useAuth() {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [authError, setAuthError] = useState<any>(null);
 
   useEffect(() => {
     if (!isFirebaseConfigured() || !auth) {
@@ -49,6 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       })
       .catch((error) => {
         console.error("Google redirect login error:", error);
+        setAuthError(error);
       });
 
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
@@ -61,28 +65,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signInWithGoogle = useCallback(async (): Promise<User | null> => {
     if (!auth) return null;
+    setAuthError(null);
     try {
-      // Check if it is a mobile device or running as standalone PWA
-      const isMobileOrPWA = 
-        /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
-        window.matchMedia("(display-mode: standalone)").matches;
-
-      if (isMobileOrPWA) {
-        console.log("Mobile/PWA detected. Initiating signInWithRedirect...");
-        await signInWithRedirect(auth, googleProvider);
-        return null; // Will redirect away, execution stops here
-      }
-
+      console.log("Attempting signInWithPopup...");
       const result = await signInWithPopup(auth, googleProvider);
       return result.user;
     } catch (error: any) {
-      // User closed popup intentionally — not an error
+      // User closed popup intentionally — not a fatal error
       if (error?.code === "auth/popup-closed-by-user" || error?.code === "auth/cancelled-popup-request") {
         console.log("Login popup closed/cancelled by user");
         return null;
       }
-      // Re-throw actual errors so the caller can show them to the user
+
+      // Check if popup was blocked or failed
+      const isPopupBlocked = 
+        error?.code === "auth/popup-blocked" || 
+        error?.code === "auth/cancelled-popup-request" ||
+        error?.code === "auth/network-request-failed" ||
+        /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+      if (isPopupBlocked) {
+        console.log("Popup failed or blocked on mobile. Falling back to signInWithRedirect...");
+        try {
+          await signInWithRedirect(auth, googleProvider);
+          return null; // Will redirect away, execution stops
+        } catch (redirectError: any) {
+          console.error("Google signInWithRedirect fallback error:", redirectError);
+          setAuthError(redirectError);
+          throw redirectError;
+        }
+      }
+
       console.error("Google sign-in error:", error);
+      setAuthError(error);
       throw error;
     }
   }, []);
@@ -97,7 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, loading, signInWithGoogle, signOut }}>
+    <AuthContext.Provider value={{ user, loading, signInWithGoogle, signOut, authError }}>
       {children}
     </AuthContext.Provider>
   );
