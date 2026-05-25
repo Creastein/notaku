@@ -15,6 +15,8 @@ import {
   Lightning,
   CaretDown,
   Gear,
+  DownloadSimple,
+  X,
 } from "@phosphor-icons/react";
 import { format, isSameMonth, startOfMonth, subMonths, isToday, isYesterday } from "date-fns";
 import { id } from "date-fns/locale";
@@ -246,6 +248,7 @@ export default function HomePage() {
   const [mounted, setMounted] = useState(false);
   const [greeting, setGreeting] = useState({ text: "Halo", emoji: "👋" });
   const [showDemoBtn, setShowDemoBtn] = useState(false);
+  const [showPwaPrompt, setShowPwaPrompt] = useState(false);
   
   const { showToast } = useToast();
   
@@ -340,6 +343,13 @@ export default function HomePage() {
     setMounted(true);
     setGreeting(getGreeting());
     setShowDemoBtn(!hasDemoData());
+
+    if (!localStorage.getItem("notaku_pwa_prompt_dismissed")) {
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+      if (!isStandalone) {
+        setShowPwaPrompt(true);
+      }
+    }
   }, []);
 
   /* ── data loading ── */
@@ -457,6 +467,39 @@ export default function HomePage() {
   return (
     <div ref={containerRef} className="relative z-10 p-5 space-y-4 pb-6">
       <GradientOrbs />
+
+      {/* ── PWA INSTALL PROMPT ── */}
+      {showPwaPrompt && (
+        <div className="bg-sky-500 text-white rounded-2xl p-4 flex items-center justify-between shadow-lg relative overflow-hidden content-card animate-fade-in-up">
+          <div className="absolute -right-4 -top-4 w-16 h-16 bg-white/20 rounded-full" />
+          <div className="relative z-10 flex items-center gap-3">
+            <div className="bg-white/20 p-2 rounded-xl">
+              <DownloadSimple size={20} weight="bold" />
+            </div>
+            <div>
+              <p className="text-[13px] font-bold">Install NotaKu di HP</p>
+              <p className="text-[11px] text-white/80 leading-tight mt-0.5">Lebih cepat & bisa offline</p>
+            </div>
+          </div>
+          <div className="relative z-10 flex items-center gap-1.5">
+            <button 
+              onClick={() => router.push("/settings")} 
+              className="bg-white text-sky-600 text-[11px] font-bold px-3 py-1.5 rounded-full shadow-sm hover:scale-105 transition-transform"
+            >
+              Install
+            </button>
+            <button 
+              onClick={() => {
+                localStorage.setItem("notaku_pwa_prompt_dismissed", "true");
+                setShowPwaPrompt(false);
+              }}
+              className="p-1.5 text-white/70 hover:text-white hover:bg-white/10 rounded-full transition-colors"
+            >
+              <X size={16} weight="bold" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ── HEADER ── */}
       <div className="page-header flex items-center justify-between pt-3">
@@ -618,6 +661,25 @@ export default function HomePage() {
               <div className="w-1.5 h-1.5 rounded-full bg-white/80 animate-pulse" />
               <span className="text-[10px] text-white/70 font-bold">LIVE</span>
             </div>
+          </div>
+
+          {/* Target Omset Progress */}
+          <div className="mt-5 pt-4 border-t border-white/10">
+            <div className="flex justify-between items-end mb-1.5">
+              <p className="text-[10px] text-white/70 font-semibold uppercase tracking-wider">Target Omset Bulan Ini</p>
+              <p className="text-[11px] font-bold">{Math.min(((totalIncome / 10000000) * 100), 100).toFixed(1)}%</p>
+            </div>
+            <div className="h-1.5 bg-black/20 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-white rounded-full relative transition-all duration-1000 ease-out"
+                style={{ width: `${Math.min((totalIncome / 10000000) * 100, 100)}%` }}
+              >
+                <div className="absolute inset-0 bg-white/50 animate-pulse" />
+              </div>
+            </div>
+            <p className="text-[10px] text-white/60 font-medium mt-1.5">
+              {formatRupiah(totalIncome)} / Rp10.000.000
+            </p>
           </div>
         </div>
         </div>

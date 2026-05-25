@@ -5,7 +5,7 @@ import { Transaction } from "@/types";
 import { getTransactions, addTransaction, deleteTransaction, updateTransaction } from "@/lib/storage";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
-import { ArrowUpRight, ArrowDownRight, ArrowLeft, Plus, Trash, X, Microphone, MicrophoneSlash, MagnifyingGlass, Gear, Pencil } from "@phosphor-icons/react";
+import { ArrowUpRight, ArrowDownRight, ArrowLeft, Plus, Trash, X, Microphone, MicrophoneSlash, MagnifyingGlass, Gear, Pencil, Sparkle } from "@phosphor-icons/react";
 import { useToast } from "@/components/Toast";
 import { triggerHaptic } from "@/lib/haptics";
 import Link from "next/link";
@@ -40,6 +40,9 @@ export default function TransactionsPage() {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<"all"|"income"|"expense">("all");
 
+  const [quickAddText, setQuickAddText] = useState("");
+  const [isQuickAdding, setIsQuickAdding] = useState(false);
+
   // Form state (shared between add & edit)
   const [fType, setFType] = useState<"income"|"expense">("expense");
   const [fAmt, setFAmt] = useState("");
@@ -71,6 +74,46 @@ export default function TransactionsPage() {
       document.body.style.overflow = "unset";
     };
   }, [showForm]);
+
+  async function handleQuickAdd(e: React.FormEvent) {
+    e.preventDefault();
+    if (!quickAddText.trim()) return;
+    
+    setIsQuickAdding(true);
+    triggerHaptic(10);
+    try {
+      const res = await fetch("/api/parse-transaction", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: quickAddText })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || "Gagal diproses");
+      
+      const parsed = data.data;
+      await addTransaction({
+        type: parsed.type,
+        amount: parsed.amount,
+        category: parsed.category,
+        date: new Date().toISOString().split("T")[0],
+        merchantName: parsed.merchantName,
+        createdAt: new Date().toISOString(),
+        notes: "Via Catat Cepat AI"
+      });
+      
+      showToast({ type: "success", title: "Berhasil dicatat! ✨", message: `${parsed.type === 'income' ? 'Pemasukan' : 'Pengeluaran'} Rp${fmtRp(parsed.amount).replace('Rp', '').trim()} dari ${parsed.merchantName}` });
+      setQuickAddText("");
+      await load();
+      import("canvas-confetti").then((confetti) => {
+        confetti.default({ particleCount: 50, spread: 60, origin: { y: 0.6 } });
+      });
+    } catch (err: any) {
+      triggerHaptic(20);
+      showToast({ type: "error", title: "Ups!", message: err.message || "Gagal memproses teks." });
+    } finally {
+      setIsQuickAdding(false);
+    }
+  }
 
   async function load() { setLoading(true); setTxs(await getTransactions()); setLoading(false); }
 
@@ -263,7 +306,29 @@ export default function TransactionsPage() {
         </div>
       </div>
 
-      <div className="animate-fade-in-up delay-1 space-y-2.5 relative z-10">
+      <div className="animate-fade-in-up delay-1 space-y-3 relative z-10">
+        
+        {/* ── QUICK ADD AI ── */}
+        <form onSubmit={handleQuickAdd} className="relative">
+          <div className="relative flex items-center">
+            <input 
+              type="text" 
+              value={quickAddText}
+              onChange={(e) => setQuickAddText(e.target.value)}
+              disabled={isQuickAdding}
+              placeholder="Catat Cepat AI ✨ 'Jual nasi 45rb'..." 
+              className="input-premium w-full pr-12 text-sm bg-white/50 dark:bg-slate-800/50 backdrop-blur-md border-sky-400/30 focus:border-sky-400 placeholder:text-foreground/40 font-medium"
+            />
+            <button 
+              type="submit"
+              disabled={isQuickAdding || !quickAddText.trim()}
+              className="absolute right-1.5 p-1.5 bg-sky-400 text-white rounded-lg hover:bg-sky-500 disabled:opacity-50 disabled:bg-slate-300 dark:disabled:bg-slate-600 transition-colors"
+            >
+              {isQuickAdding ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin block" /> : <Sparkle size={16} weight="fill" />}
+            </button>
+          </div>
+        </form>
+
         <div className="relative">
           <MagnifyingGlass size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-foreground/30" />
           <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Cari transaksi..." className="input-premium w-full pl-10 text-sm" />
