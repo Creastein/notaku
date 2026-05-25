@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Transaction } from "@/types";
 import { getTransactions, getUserProfile, UserProfile } from "@/lib/storage";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Area, AreaChart } from "recharts";
@@ -28,15 +28,15 @@ function formatYAxis(value: number) {
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     return (
-      <div className="glass-card rounded-2xl p-3 border border-sky-400/10 shadow-xl backdrop-blur-md text-xs font-semibold space-y-1 bg-slate-950/90 text-slate-100">
-        <p className="text-[10px] font-black text-slate-400 mb-1.5 uppercase tracking-wider">{label}</p>
+      <div className="rounded-2xl p-3.5 border border-white/10 shadow-2xl backdrop-blur-md text-xs font-semibold space-y-1.5 bg-slate-950/95 text-slate-100 min-w-[150px]">
+        <p className="text-[10px] font-black text-slate-400 mb-2 uppercase tracking-wider">{label}</p>
         {payload.map((pld: any, index: number) => {
-          const color = pld.color || pld.fill || "var(--primary)";
+          const color = pld.color || pld.fill || "#38bdf8";
           return (
             <div key={index} className="flex items-center justify-between gap-4">
               <div className="flex items-center gap-1.5">
                 <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
-                <span>{pld.name}</span>
+                <span className="text-slate-200">{pld.name}</span>
               </div>
               <span className="font-extrabold text-right" style={{ color }}>{fmtRp(pld.value)}</span>
             </div>
@@ -97,12 +97,22 @@ export default function ReportsPageClient() {
   }
   const [aiDigest, setAiDigest] = useState<AIDigest | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState(false);
+  const [retryTrigger, setRetryTrigger] = useState(0);
+  const isFetchingRef = useRef(false);
 
   useEffect(() => {
     if (!mounted || txs.length === 0) return;
     
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 12000); // 12 seconds client-side timeout
+
     async function fetchAiAnalysis() {
+      if (isFetchingRef.current) return;
+      isFetchingRef.current = true;
       setAiLoading(true);
+      setAiError(false);
+
       const cacheKey = `notaku_report_analysis_${period}_v1`;
       const cached = localStorage.getItem(cacheKey);
 
@@ -120,6 +130,8 @@ export default function ReportsPageClient() {
           if (!isExpired && !dataChanged && parsed.analysis?.executiveSummary) {
             setAiDigest(parsed.analysis);
             setAiLoading(false);
+            isFetchingRef.current = false;
+            clearTimeout(timeoutId);
             return;
           }
         } catch {
@@ -131,6 +143,7 @@ export default function ReportsPageClient() {
         const res = await fetch("/api/report-analysis", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          signal: controller.signal,
           body: JSON.stringify({
             financialData: {
               totalIncome: income,
@@ -155,17 +168,34 @@ export default function ReportsPageClient() {
               transactionCount: txCount,
               netProfit: profit
             }));
+          } else {
+            setAiError(true);
           }
+        } else {
+          setAiError(true);
         }
-      } catch (err) {
-        console.error("Gagal mendapatkan analisis AI:", err);
+      } catch (err: any) {
+        if (err.name === "AbortError") {
+          console.warn("Report AI analysis fetch aborted due to timeout");
+        } else {
+          console.error("Gagal mendapatkan analisis AI:", err);
+          setAiError(true);
+        }
       } finally {
         setAiLoading(false);
+        isFetchingRef.current = false;
+        clearTimeout(timeoutId);
       }
     }
 
     fetchAiAnalysis();
-  }, [txs, period, mounted, profile]);
+
+    return () => {
+      controller.abort();
+      clearTimeout(timeoutId);
+      isFetchingRef.current = false;
+    };
+  }, [txs, period, mounted, profile, retryTrigger]);
 
   const sorted = mounted ? [...periodTxs].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()) : [];
   let cum = 0;
@@ -651,6 +681,29 @@ export default function ReportsPageClient() {
                 <div className="h-4 w-32 bg-foreground/10 rounded animate-pulse" />
               </div>
               <div className="h-3 w-5/6 bg-foreground/5 rounded animate-pulse" />
+            </div>
+          ) : aiError ? (
+            <div className="glass-card rounded-2xl p-4 border border-rose-500/20 bg-rose-500/5 animate-fade-in-up delay-3 space-y-3 relative overflow-hidden">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="bg-rose-500/10 p-2 rounded-xl text-rose-500 dark:text-rose-400 shadow-sm shrink-0">
+                    <Sparkle size={16} />
+                  </div>
+                  <div>
+                    <p className="text-[11px] font-black text-rose-500 dark:text-rose-400 uppercase tracking-widest">AI CFO Penasihat</p>
+                    <p className="text-[10px] text-rose-500/70 font-semibold mt-0.5">Analisis tertunda / timeout</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setRetryTrigger(prev => prev + 1)}
+                  className="px-3 py-1 rounded-xl text-[10px] font-bold bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 transition-all border border-rose-500/20 active:scale-95 cursor-pointer"
+                >
+                  Coba Lagi 🔄
+                </button>
+              </div>
+              <p className="text-xs text-foreground/50 leading-relaxed font-medium">
+                Maaf Juragan, koneksi server AI sedang sibuk atau melambat. Silakan klik tombol di kanan atas untuk memuat ulang analisis.
+              </p>
             </div>
           ) : aiDigest ? (
             <div className="relative rounded-2xl p-[1.5px] overflow-hidden animate-fade-in-up delay-3 shadow-lg shadow-sky-400/5">

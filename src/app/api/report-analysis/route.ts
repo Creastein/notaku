@@ -81,7 +81,13 @@ FORMAT OUTPUT (HARUS JSON MURNI):
 Pastikan output HANYA JSON valid tanpa markdown atau teks tambahan.
     `.trim();
 
-    const result = await geminiModel.generateContent(prompt);
+    // Timeout of 9 seconds for Gemini API response to ensure API route responds before gateway timeouts
+    const geminiPromise = geminiModel.generateContent(prompt);
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error("Gemini API Timeout")), 9000)
+    );
+
+    const result = await Promise.race([geminiPromise, timeoutPromise]);
     let responseText = result.response.text().trim();
 
     // Clean markdown formatting

@@ -17,6 +17,8 @@ import {
   Gear,
   DownloadSimple,
   X,
+  Sun,
+  Moon,
 } from "@phosphor-icons/react";
 import { format, isSameMonth, startOfMonth, subMonths, isToday, isYesterday } from "date-fns";
 import { id } from "date-fns/locale";
@@ -28,6 +30,7 @@ import { GradientOrbs } from "@/components/effects/GradientOrbs";
 import { TiltCard } from "@/components/effects/TiltCard";
 import { CountUp } from "@/components/effects/CountUp";
 import { useToast } from "@/components/Toast";
+import { useTheme } from "@/components/ThemeProvider";
 
 /* ─────────────────── helpers ─────────────────── */
 
@@ -245,6 +248,7 @@ export default function HomePageClient() {
   const [showPwaPrompt, setShowPwaPrompt] = useState(false);
   
   const { showToast } = useToast();
+  const { theme, setTheme } = useTheme();
   
   const router = useRouter();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -538,6 +542,24 @@ export default function HomePageClient() {
               {txCount} trx
             </span>
           </div>
+          {/* Quick Theme Toggle */}
+          {mounted && (
+            <button
+              onClick={() => {
+                const nextTheme = theme === "dark" ? "light" : "dark";
+                setTheme(nextTheme);
+                showToast({
+                  type: "success",
+                  title: `Mode ${nextTheme === "dark" ? "Gelap" : "Terang"} Aktif! ✨`,
+                  message: `Aplikasi berhasil beralih ke tema ${nextTheme === "dark" ? "gelap" : "terang"}.`,
+                });
+              }}
+              className="w-8 h-8 flex items-center justify-center rounded-full bg-foreground/[0.05] border border-foreground/[0.07] text-foreground/60 hover:text-foreground hover:bg-foreground/[0.08] transition-colors"
+              title="Ganti Tema"
+            >
+              {theme === "dark" ? <Sun size={14} /> : <Moon size={14} />}
+            </button>
+          )}
           {/* Settings link */}
           <Link
             href="/settings"
