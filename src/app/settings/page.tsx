@@ -37,6 +37,26 @@ export default function SettingsPage() {
     }
   }, []);
 
+  // Auto-link Google Account after redirect login on mobile
+  useEffect(() => {
+    if (user && profile.ownerName && !profile.userId) {
+      const updatedProfile = { ...profile, userId: user.uid };
+      setProfile(updatedProfile);
+      saveUserProfile(updatedProfile);
+      migrateTransactionsToUid(user.uid)
+        .then(() => {
+          showToast({
+            type: "success",
+            title: "Akun Google terhubung! 🔗",
+            message: "Data Anda sekarang tersinkron dan aman di cloud.",
+          });
+        })
+        .catch((err) => {
+          console.error("Gagal migrasi data saat auto-link:", err);
+        });
+    }
+  }, [user, profile, showToast]);
+
   const handleSaveProfile = () => {
     setIsSaving(true);
     try {
